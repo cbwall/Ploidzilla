@@ -47,3 +47,77 @@ Fig.formatting <-
 
 ```
 
+```{r}
+bulk.df<-read.csv("data/iso.R.csv")
+
+# format metadata
+make.fac<-c("ploidy", "fraction", "sample.ID")
+bulk.df[make.fac]<-lapply(bulk.df[make.fac], factor) # make all these factors
+
+# figures
+
+##### Carbon
+d13C.plot<-ggplot(bulk.df, aes(ploidy, d13C, fill=fraction)) +
+  geom_boxplot(outlier.size = 0.7, alpha=0.6)+
+  scale_fill_manual(values=c("skyblue", "gray50")) +
+  ylab(expression(paste(delta^{13}, C, " (\u2030)")))+
+  ylim(-20, -14) +
+  xlab("Ploidy State")+ theme_bw() +
+  theme(strip.text = element_text(face = "italic"))
+
+d13C.h.s.plot<-ggplot(bulk.df, aes(ploidy, d13C.h.s, fill=ploidy)) +
+  geom_hline(yintercept=0, linetype="dashed", color = "gray50") +
+  geom_boxplot(outlier.size = 0.7, alpha=0.6)+
+  scale_fill_manual(values=c("skyblue4", "skyblue4")) +
+  ylab(expression(paste(delta^{13},  C[H-S], " (\u2030)")))+
+  ylim(-2, 2) +
+  xlab("Ploidy State")+ theme_bw() +
+  theme(strip.text = element_text(face = "italic")) + guides(fill="none")
+
+##### Nitrogen
+d15N.plot<-ggplot(bulk.df, aes(ploidy, d15N, fill=fraction)) +
+  geom_boxplot(outlier.size = 0.7, alpha=0.6)+
+  scale_fill_manual(values=c("olivedrab3", "gray50")) +
+  ylab(expression(paste(delta^{15}, N, " (\u2030)")))+
+  ylim(3, 6) +
+  xlab("Ploidy state")+ theme_bw() +
+  theme(strip.text = element_text(face = "italic"))
+
+d15N.h.s.plot<-ggplot(bulk.df, aes(ploidy, d15N.h.s, fill=ploidy)) +
+  geom_hline(yintercept=0, linetype="dashed", color = "gray50") +
+  geom_boxplot(outlier.size = 0.7, alpha=0.6)+
+  scale_fill_manual(values=c("palegreen4", "palegreen4")) +
+  ylab(expression(paste(delta^{13},  C[H-S], " (\u2030)")))+
+  ylim(-2, 2) +
+  xlab("Ploidy State")+ theme_bw() +
+  theme(strip.text = element_text(face = "italic")) + guides(fill="none")
+
+######C.N
+# inspect whether any contam
+d13C.CN.plot<-ggplot(bulk.df, aes(y=C.N, x=d13C, color=fraction)) +
+  geom_point(size=2.5)+
+  scale_color_manual(values=c("coral", "gray50")) +
+  scale_fill_manual(values=c("coral", "gray50")) +
+  geom_smooth(method=lm, aes(fill=fraction)) +
+  ylab("C:N values")+
+  xlab("d13C")+ theme_bw() +
+  theme(strip.text = element_text(face = "italic"))
+
+# plot data
+C.N.plot<-ggplot(bulk.df, aes(ploidy, C.N, fill=fraction)) +
+  geom_boxplot(outlier.size = 0.7, alpha=0.6)+
+  scale_fill_manual(values=c("coral", "gray50")) +
+  ylab("C:N")+
+  ylim(2, 10) +
+  xlab("Ploidy state")+ theme_bw() +
+  theme(strip.text = element_text(face = "italic"))
+
+###### compile plots
+EA.plots<-plot_grid(d13C.plot, d13C.h.s.plot, 
+                    d15N.plot, d15N.h.s.plot, nrow=2, rel_widths=c(1,0.5))
+EA.plots
+dev.copy(pdf, "figures/EA.plots.pdf", width = 8, height = 8)
+dev.off()
+
+```
+

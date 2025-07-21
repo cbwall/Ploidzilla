@@ -1,0 +1,111 @@
+ploidy,sample.ID,fraction,ug.N,d15N,ug.C,d13C,C.N,average?,d15N.h.s,d13C.h.s
+diploid,101D,host,29.5,4.5,126.2,-15.6,4.28,,-1.4,1.1
+diploid,101D,symbiont,7.7,5.9,47.0,-16.7,6.10,,,
+diploid,128D,host,27.9,4.4,126.5,-17.2,4.53,,0.0,0.7
+diploid,128D,symbiont,9.0,4.4,64.2,-17.9,7.13,,,
+diploid,135D,host,23.0,5.2,103.8,-16.8,4.51,,1.0,0.1
+diploid,135D,symbiont,10.5,4.2,75.8,-16.9,7.22,,,
+diploid,13D,host,61.6,4.8,319.0,-16.8,5.18,,0.8,0.1
+diploid,13D,symbiont,12.4,4.0,86.1,-16.9,6.94,,,
+diploid,142D,host,40.8,4.9,223.8,-17.6,5.49,,NA,1.0
+diploid,142D,symbiont,5.0,NA,37.8,-18.6,7.56,,,
+diploid,15D,host,53.2,4.8,253.3,-17.6,4.76,,-0.1,0.5
+diploid,15D,symbiont,6.6,4.9,48.3,-18.1,7.32,,,
+diploid,160D,host,50.8,4.7,241.6,-16.1,4.76,,0.1,0.3
+diploid,160D,symbiont,9.7,4.6,63.3,-16.4,6.53,,,
+diploid,168D,host,43.8,4.7,225.3,-15.4,5.14,,0.0,0.1
+diploid,168D,symbiont,10.5,4.7,64.8,-15.5,6.17,,,
+diploid,181D,host,NA,NA,NA,NA,NA,,NA,NA
+diploid,181D,symbiont,6.9,NA,40.4,-18.0,5.86,,,
+diploid,18D,host,43.1,4.8,210.6,-17.1,4.9,< average,0.0,0.6
+diploid,18D,symbiont,9.0,4.7,55.6,-17.7,6.3,< average,,
+diploid,202D,host,53.6,4.7,247.8,-16.8,4.62,,0.6,-0.1
+diploid,202D,symbiont,9.0,4.1,71.5,-16.7,7.94,,,
+diploid,221D,host,46.5,4.6,223.4,-17.8,4.80,,NA,NA
+diploid,221D,symbiont,NA,NA,NA,NA,NA,,,
+diploid,227D,host,NA,NA,NA,NA,NA,,NA,NA
+diploid,227D,symbiont,6.1,4.4,37.9,-18.1,6.21,,,
+diploid,243D,host,NA,NA,NA,NA,NA,,NA,NA
+diploid,243D,symbiont,39.3,4.8,202.5,-15.6,5.15,,,
+diploid,247D,host,21.3,4.4,93.7,-16.2,4.40,,-0.2,-0.3
+diploid,247D,symbiont,12.8,4.6,94.6,-15.9,7.39,,,
+diploid,260D,host,33.6,5.2,153.5,-15.7,4.57,,0.2,0.1
+diploid,260D,symbiont,19.4,5.0,116.5,-15.8,6.01,,,
+diploid,261D,host,34.1,4.6,154.7,-16.4,4.54,,0.3,0.4
+diploid,261D,symbiont,11.2,4.3,75.8,-16.8,6.77,,,
+diploid,266D,host,38.8,4.7,176.6,-16.6,4.55,,NA,1.5
+diploid,266D,symbiont,2.9,NA,18.6,-18.1,6.41,,,
+diploid,268T,host,NA,NA,NA,NA,NA,,NA,NA
+diploid,268T,symbiont,NA,NA,NA,NA,NA,,,
+diploid,278D,host,43.7,4.8,236.2,-17.9,5.41,,NA,0.4
+diploid,278D,symbiont,5.9,NA,42.9,-18.3,7.27,,,
+diploid,295D,host,19.8,4.9,99.6,-15.6,5.03,,-0.2,1.4
+diploid,295D,symbiont,6.1,5.1,38.3,-17.0,6.28,,,
+diploid,296D,host,48.0,4.8,224.9,-15.8,4.69,,0.2,0.5
+diploid,296D,symbiont,8.4,4.6,62.0,-16.3,7.38,,,
+diploid,302D,host,31.0,4.8,153.3,-16.2,4.95,,NA,1.4
+diploid,302D,symbiont,5.3,NA,37.2,-17.6,7.02,,,
+diploid,307D,host,46.7,4.5,214.8,-17.1,4.6,< average,NA,0.8
+diploid,307D,symbiont,4.7,NA,29.4,-17.9,6.26,,,
+diploid,313D,host,52.1,4.9,273.5,-17.1,5.25,,0.3,0.2
+diploid,313D,symbiont,26.6,4.6,198.9,-17.3,7.48,,,
+diploid,44D,host,52.1,4.8,238.4,-17.8,4.58,,0.0,0.8
+diploid,44D,symbiont,6.6,4.8,47.5,-18.6,7.20,,,
+diploid,61D,host,40.7,4.8,206.2,-18.4,5.07,,NA,0.2
+diploid,61D,symbiont,7.9,NA,50.0,-18.6,6.33,,,
+diploid,73D,host,40.1,4.7,190.9,-17.7,4.8,< average,0.8,0.4
+diploid,73D,symbiont,5.6,3.9,40.0,-18.0,7.0,< average,,
+diploid,84D,host,36.9,4.6,200.7,-17.7,5.44,,0.4,0.2
+diploid,84D,symbiont,7.7,4.2,59.6,-17.9,7.6,< average,,
+diploid,88D,host,30.1,4.9,135.3,-16.2,4.50,,-0.3,0.3
+diploid,88D,symbiont,11.7,5.2,54.8,-16.5,4.68,,,
+diploid,91D,host,36.3,5.0,189.8,-15.9,5.23,,0.8,0.1
+diploid,91D,symbiont,10.8,4.2,66.6,-16.0,6.17,,,
+triploid,124T,host,36.9,5.0,179.4,-16.8,4.86,,NA,0.5
+triploid,124T,symbiont,10.0,NA,67.8,-17.3,6.78,,,
+triploid,141T,host,40.1,4.7,161.8,-17.2,4.03,,-0.1,0.5
+triploid,141T,symbiont,9.6,4.8,66.3,-17.7,6.91,,,
+triploid,162T,host,60.2,4.7,301.9,-16.0,5.01,,-0.4,0.1
+triploid,162T,symbiont,9.6,5.1,67.3,-16.1,7.01,,,
+triploid,175T,host,54.1,4.8,270.3,-17.9,5.00,,NA,0.1
+triploid,175T,symbiont,9.9,NA,66.0,-18.0,6.67,,,
+triploid,176T,host,43.1,4.8,191.2,-17.7,4.44,,NA,0.8
+triploid,176T,symbiont,4.9,NA,36.5,-18.5,7.45,,,
+triploid,181T,host,41.1,5.0,217.9,-16.9,5.3,< average,NA,NA
+triploid,181T,symbiont,NA,NA,NA,NA,NA,,,
+triploid,194T,host,44.7,4.6,219.5,-17.3,4.9,< average,NA,1.0
+triploid,194T,symbiont,5.3,NA,33.3,-18.3,6.28,,,
+triploid,197T,host,26.1,4.5,113.6,-16.4,4.35,,-0.3,0.2
+triploid,197T,symbiont,11.6,4.8,76.3,-16.6,6.58,,,
+triploid,236T,host,33.7,4.8,147.8,-17.3,4.39,,0.0,0.2
+triploid,236T,symbiont,10.0,4.8,70.2,-17.5,7.02,,,
+triploid,237T,host,39.2,4.6,181.6,-16.2,4.63,,0.5,-0.5
+triploid,237T,symbiont,8.4,4.1,53.6,-15.7,6.4,< average,,
+triploid,249T,host,41.5,4.2,188.0,-16.9,4.53,,-0.8,-0.2
+triploid,249T,symbiont,16.0,5.0,85.2,-16.7,5.33,,,
+triploid,256T,host,61.3,4.7,361.4,-18.0,5.90,,NA,0.7
+triploid,256T,symbiont,4.6,NA,27.8,-18.7,6.04,,,
+triploid,262T,host,25.4,4.3,107.1,-17.4,4.22,,-0.2,0.9
+triploid,262T,symbiont,8.2,4.5,60.3,-18.3,7.35,,,
+triploid,268T,host,NA,NA,NA,NA,NA,,NA,NA
+triploid,268T,symbiont,4.4,NA,32.4,-17.1,7.36,,,
+triploid,269T,host,28.7,4.8,135.6,-16.7,4.8,< average,NA,1.0
+triploid,269T,symbiont,4.7,NA,32.5,-17.6,6.91,,,
+triploid,288T,host,35.5,4.3,155.4,-16.4,4.38,,NA,NA
+triploid,288T,symbiont,NA,NA,NA,NA,NA,,,
+triploid,298T,host,28.9,4.7,131.7,-17.8,4.56,,NA,0.9
+triploid,298T,symbiont,5.6,NA,39.0,-18.7,6.96,,,
+triploid,305T,host,23.9,4.6,101.7,-16.2,4.26,,NA,1.6
+triploid,305T,symbiont,3.4,NA,22.5,-17.8,6.62,,,
+triploid,310T,host,43.4,4.6,215.8,-17.9,5.0,< average,NA,0.7
+triploid,310T,symbiont,6.0,NA,49.2,-18.6,8.20,,,
+triploid,314T,host,31.4,4.7,159.6,-18.0,5.08,,0.4,0.2
+triploid,314T,symbiont,8.2,4.3,63.6,-18.2,7.76,,,
+triploid,323T,host,80.4,4.8,446.3,-17.5,5.55,,0.9,0.7
+triploid,323T,symbiont,13.3,4.0,99.1,-18.2,7.4,< average,,
+triploid,327T,host,27.6,4.8,142.1,-15.4,5.1,< average,NA,2.3
+triploid,327T,symbiont,2.8,NA,16.7,-17.7,5.96,,,
+triploid,83T,host,24.9,4.8,111.9,-18.1,4.49,,0.8,-0.1
+triploid,83T,symbiont,6.9,4.0,56.2,-18.0,8.14,,,
+triploid,95T,host,34.3,5.0,169.1,-15.2,4.93,,NA,-0.1
+triploid,95T,symbiont,9.7,NA,55.5,-15.1,5.72,,,
