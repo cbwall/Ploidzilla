@@ -1,0 +1,49 @@
+---
+title: "Ploidzilla"
+author: "CB Wall"
+date: "07/21/2025"
+output:
+  html_document:
+    code_folding: hide
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '4'
+editor_options: 
+  chunk_output_Type: console
+---
+
+
+```{r setup chunk, setup, include = FALSE, cache=FALSE}
+
+if (!require('knitr')) install.packages('knitr'); library('knitr')
+knitr::opts_chunk$set(warning=FALSE, message=FALSE, fig.align='center', collapse=TRUE)
+
+
+# load packages
+if (!require("pacman")) install.packages("pacman") # for rapid install if not in library
+
+# use pacman to load all the packages you are missing!
+pacman::p_load("knitr", "lme4", "lmerTest", "tidyverse", "effects", "plyr", "plotrix", "car","gridExtra", "cowplot", "tools", "mgcv", "gratia", "MASS", "stats", "sjstats", "coin", "emmeans", "ggplot2", "mda", "nortest", "reshape2", "gmm", "propagate","ggmap", "RgoogleMaps", "R2jags", "MixSIAR","GGally", "ggbiplot", "ggcorrplot", "vegan", "devtools", "multcompView", "scales", "pairwiseAdonis", "ggcorrplot", "ggord", "dplyr", "ordr", "remotes", "devtools", "pak")
+
+remotes::install_github("pmartinezarbizu/pairwiseAdonis/pairwiseAdonis")
+remotes::install_github("brianstock/MixSIAR", dependencies=T)
+#pak::pak("r-lib/devtools") # if having an issue with devtools, can load the development version
+
+
+### general formatting for figures 
+Fig.formatting <- 
+  theme(axis.ticks.length = unit(0.2, "cm"),
+        axis.text.x = element_text(size = 12, color = "black"),
+        axis.text.y = element_text(size = 12, color = "black"),
+        axis.title.x = element_text(size = 14, color = "black"),
+        axis.title.y = element_text(size = 14, color = "black"),
+        legend.text = element_text(size = 10, color = "black"),
+        legend.title = element_blank(),
+        axis.ticks = element_line(color = "black"),
+        legend.key.size = unit(0.6, "cm"))
+
+```
+
