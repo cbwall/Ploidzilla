@@ -26,10 +26,12 @@ knitr::opts_chunk$set(warning=FALSE, message=FALSE, fig.align='center', collapse
 if (!require("pacman")) install.packages("pacman") # for rapid install if not in library
 
 # use pacman to load all the packages you are missing!
-pacman::p_load("knitr", "lme4", "lmerTest", "tidyverse", "effects", "plyr", "plotrix", "car","gridExtra", "cowplot", "tools", "mgcv", "gratia", "MASS", "stats", "sjstats", "coin", "emmeans", "ggplot2", "mda", "nortest", "reshape2", "gmm", "propagate","ggmap", "RgoogleMaps", "R2jags", "MixSIAR","GGally", "ggbiplot", "ggcorrplot", "vegan", "devtools", "multcompView", "scales", "pairwiseAdonis", "ggcorrplot", "ggord", "dplyr", "ordr", "remotes", "devtools", "pak")
+pacman::p_load("knitr", "lme4", "lmerTest", "tidyverse", "effects", "plyr", "plotrix", "car","gridExtra", "cowplot", "tools", "mgcv", "gratia", "MASS", "stats", "sjstats", "coin", "emmeans", "ggplot2", "mda", "nortest", "reshape2", "gmm", "propagate","ggmap", "RgoogleMaps", "R2jags", "MixSIAR","GGally", "ggbiplot", "ggcorrplot", "vegan", "devtools", "multcompView", "scales", "pairwiseAdonis", "ggcorrplot", "ggord", "dplyr", "ordr", "remotes", "devtools", "pak", "tidyr", "SIBER", "Hotelling", "seacarb")
 
 remotes::install_github("pmartinezarbizu/pairwiseAdonis/pairwiseAdonis")
 remotes::install_github("brianstock/MixSIAR", dependencies=T)
+devtools::install_github("andrewljackson/SIBER@master", build_vignettes = TRUE)
+
 #pak::pak("r-lib/devtools") # if having an issue with devtools, can load the development version
 
 
@@ -46,9 +48,40 @@ Fig.formatting <-
         legend.key.size = unit(0.6, "cm"))
 
 ```
+## Overview
 
+## In situ data
+### Symbiont density
+```{r}
+symb.df<-read.csv("data/symb.R.csv")
+samplesize<-aggregate(cells.cm2~ploidy, data=symb.df, FUN=length) # 29 diploid, 22 triploid)
+
+# format metadata
+make.fac<-c("ploidy", "sample.ID")
+symb.df[make.fac]<-lapply(symb.df[make.fac], factor) # make all these factors
+
+symb.df<- symb.df %>% filter(!sample.ID == "278D") # oddly high counts
+
+symb.df$cells.cm2<-as.numeric(symb.df$cells.cm2)
+
+##### symbiont cells
+symb.plot<-ggplot(symb.df, aes(ploidy, cells.cm2, fill=ploidy)) +
+  geom_boxplot(outlier.size = 0.7, alpha=0.6)+
+  scale_fill_manual(values=c("goldenrod", "plum3")) +
+  ylab(expression(paste("symbiont cells (cm"^{2},")")))+
+  scale_y_continuous(limits= c(0, 1000000), labels = scales::scientific) +
+  xlab("Ploidy State")+ theme_bw() + guides(fill="none")
+
+symb.plot
+dev.copy(pdf, "figures/symb.field.pdf", width = 5, height = 8)
+dev.off()
+```
+
+### Bulk EA data
 ```{r}
 bulk.df<-read.csv("data/iso.R.csv")
+C.samplesize<-aggregate(d13C~ploidy:fraction, data=bulk.df, FUN=length)
+N.samplesize<-aggregate(d15N~ploidy:fraction, data=bulk.df, FUN=length)
 
 # format metadata
 make.fac<-c("ploidy", "fraction", "sample.ID")
@@ -120,4 +153,597 @@ dev.copy(pdf, "figures/EA.plots.pdf", width = 8, height = 8)
 dev.off()
 
 ```
+
+### SIBER
+intro to SIBER: https://cran.r-project.org/web/packages/SIBER/vignettes/Introduction-to-SIBER.html
+```{r}
+SI.data <- bulk.df %>% 
+  dplyr::select(ploidy, sample.ID, fraction, d15N, d13C) %>%
+  dplyr::filter(!(is.na(d15N) | is.na(d13C)))
+
+generateSiberData()
+graphics.off()
+
+# Load your data
+all.siber.data <- as.data.frame(SI.data[, c("d13C", "d15N", "fraction", "ploidy")])
+
+# filter for each ploidy 
+dipl.siber.data<- all.siber.data %>%
+  filter(ploidy =="diploid")
+tripl.siber.data<- all.siber.data %>%
+  filter(ploidy =="triploid")
+
+# droplevels
+dipl.siber.data$ploidy<-droplevels(dipl.siber.data$ploidy)
+tripl.siber.data$ploidy<-droplevels(tripl.siber.data$ploidy)
+
+# Rename the columns
+colnames(siber.data) <- c("iso1", "iso2", "group", "community")
+colnames(dipl.siber.data) <- c("iso1", "iso2", "group", "community")
+colnames(tripl.siber.data) <- c("iso1", "iso2", "group", "community")
+
+# Create the SIBER object
+all.siber <- createSiberObject(siber.data)
+dipl.siber <- createSiberObject(dipl.siber.data)
+tripl.siber <- createSiberObject(tripl.siber.data)
+
+# for Hotelling things
+hotellings.data <- data.frame(
+  group = as.numeric(as.factor(siber.data$group)),
+  x = siber.data$iso1,
+  y = siber.data$iso2)
+
+hotellings.dipl.data <- data.frame(
+  group = as.numeric(as.factor(dipl.siber.data$group)),
+  x = dipl.siber.data$iso1,
+  y = dipl.siber.data$iso2)
+
+hotellings.tripl.data <- data.frame(
+  group = as.numeric(as.factor(tripl.siber.data$group)),
+  x = tripl.siber.data$iso1,
+  y = tripl.siber.data$iso2)
+```
+
+Ellipses are drawn for each group independently with ellipses = T. These ellipses can be made to be maximum likelihood standard ellipses by setting p = NULL, or can be made to be prediction ellipses that contain approximately p proportion of data. For example, p = 0.95 will draw an ellipse that encompasses approximately 95% of the data. The parameter n determines how many points are used to make each ellipse and hence how smooth the curves are.
+
+Convex hulls are draw around each group independently with group.hulls = T.
+```{r}
+########### ellipses
+community.hulls.args <- list(col = 1, lty = 1, lwd = 1)
+group.ellipses.args2  <- list(n = 100, p.interval = 0.95, lty = 1, lwd = 2)
+group.ellipses.args  <- list(n = 100, p.interval = 0.40, lty = 1, lwd = 2) #Standard ellipse
+group.hulls.args     <- list(lty = 2)
+colors <- c("coral", "dodgerblue")
+
+par(mfrow=c(1, 2))
+plotSiberObject(dipl.siber,
+                  ax.pad = 2, 
+                  hulls = F, community.hulls.args = community.hulls.args, 
+                  ellipses = T, group.ellipses.args = group.ellipses.args,
+                  group.hulls = T, group.hulls.args = group.hulls.args,
+                  bty = "L",
+                  iso.order = c(1,2),
+                  y.limits = c(3,6.5),
+                  x.limits = c(-20, -14),
+                  xlab = expression(paste({delta}^{13}, C, " (\u2030)")),
+                  ylab = expression(paste({delta}^{15}, N, " (\u2030)")),
+                main = expression(italic("P. acuta diploid")),
+                col = c("coral", "dodgerblue"))
+#mtext("40% SEAc = 54.7% \n 95% SEAc = 46.15%", side = 3, line = 0, cex = 0.75)
+
+plotSiberObject(tripl.siber,
+                  ax.pad = 2, 
+                  hulls = F, community.hulls.args = community.hulls.args, 
+                  ellipses = T, group.ellipses.args = group.ellipses.args,
+                  group.hulls = T, group.hulls.args = group.hulls.args,
+                  bty = "L",
+                  iso.order = c(1,2),
+                  y.limits = c(3,6.5),
+                  x.limits = c(-20, -14),
+                  xlab = expression(paste({delta}^{13}, C, " (\u2030)")),
+                  ylab = expression(paste({delta}^{15}, N, " (\u2030)")),
+                main = expression(italic("P. acuta triploid")),
+                col = c("coral", "dodgerblue"))
+                
+#mtext("40% SEAc = 58.5% \n 95% SEAc = 46.15%", side = 3, line = 0, cex = 0.75)
+
+```
+
+Calculate summary statistics for each group: TA, SEA and SEAc
+```{r}
+# * note sensitivity to sample size for n < 10 such that small sample sizes typically result in underestimation of the population TA
+
+# TA = total area of the convex hull, (TA) is highly sensitive to sample size and increases with sample size.
+
+## SEA asymptotes quickly to a constant value (in this case p, as both a and b = 1), at around n = 30. The underestimation of the population SEA for small sample sizes is an undesirable property, as it is likely to confound comparisons between studies with unequal sample sizes.
+
+# SEA-c: calculation of a corrected standard ellipse based on low sample size
+
+# SEA-b: The Bayesian estimate captures all the same properties as SEAc, being unbiased with respect to sample size and exhibiting more uncertainty with smaller sample size.
+
+group.ML.dipl <- groupMetricsML(dipl.siber)
+print(group.ML.dipl)
+
+group.ML.tripl <- groupMetricsML(tripl.siber)
+print(group.ML.tripl)
+```
+
+Whether your intended analysis is to compare isotopic niche width among groups, or among communities, the initial step is to fit Bayesian multivariate normal distributions to each group in the dataset. The decision as to whether you then want to compare the area of the ellipses among groups, or any / all of the 6 Layman metrics comes later.
+
+These multivariate normal distributions are fitted using the jags software run via the package rjags. This method relies on an iterated Gibbs Sampling technique and some information on the length, number and iterations of sampling chains is required. Additionally, the prior distributions for the parameters need to be specified. In SIBER, these are bundled into two list objects: parms which holds the parameters defining how the sampling algorithm is to run; and priors which holds information on the prior distributions of the parameters to be estimated. Typically, the priors are left vague and you should use these same values in your own analysis. Since the data are z-scored internally before the models are fitted to the data, the expected means are inherently close to zero, and the marginal variances close to one. This greatly aids the jags fitting process.
+
+After calling siberMVN() you will see output in the command window indicating that the jags models are being fitted, one block of output for each group in your dataset. 
+
+```{r}
+# options for running jags
+parms <- list()
+parms$n.iter <- 2 * 10^4   # number of iterations to run the model for
+parms$n.burnin <- 1 * 10^3 # discard the first set of values
+parms$n.thin <- 10     # thin the posterior by this many
+parms$n.chains <- 2        # run this many chains
+
+# define the priors
+priors <- list()
+priors$R <- 1 * diag(2)
+priors$k <- 2
+priors$tau.mu <- 1.0E-3
+
+# fit the ellipses which uses an Inverse Wishart prior
+# on the covariance matrix Sigma, and a vague normal prior on the 
+# means. Fitting is via the JAGS method.
+dipl.ellipses.posterior <- siberMVN(dipl.siber, parms, priors)
+tripl.ellipses.posterior <- siberMVN(tripl.siber, parms, priors)
+```
+
+When comparing individual groups with each other, be it within a single community, or groups among communities, the `Standard Ellipse Area (SEA)` is the recommended method. 
+
+Since the multivariate normal distributions have already been fitted to each group, it only remains to calculate the SEA on the posterior distribution of covariance matrix for each group, thereby yielding the `Bayesian SEA or SEA-B`. 
+
+We can also use the summary statistics we calculated earlier to add the maximum likelihood estimates of `SEA-c` to the Bayesian estimates. Credible intervals can be extracted by calling the function hdr from the hdrcde package.
+
+```{r}
+# The posterior estimates of the ellipses for each group can be used to
+# calculate the SEA.B for each group.
+SEA.B.dipl <- siberEllipses(dipl.ellipses.posterior)
+
+my_clrs <- matrix(c("salmon2", "coral", "red2","powderblue", "turquoise", "turquoise3"), nrow = 3, ncol = 2)
+
+siberDensityPlot(SEA.B.dipl, xticklabels = colnames(group.ML.dipl), 
+                xlab = c("Community | Group"),
+                ylab = expression("SEA "[B]~ ('\u2030' ^2) ),
+                bty = "L",
+                las = 1,
+                ylim = c(0,4),
+                main = "SIBER ellipses on each group",
+                clr = my_clrs)
+
+# Add red x's for the ML estimated SEA-c
+points(1:ncol(SEA.B.dipl), group.ML.dipl[3,], col="black", pch = "x", lwd = 3)
+
+
+######################
+SEA.B.tripl <- siberEllipses(tripl.ellipses.posterior)
+
+siberDensityPlot(SEA.B.tripl, xticklabels = colnames(group.ML.tripl), 
+                xlab = c("Community | Group"),
+                ylab = expression("SEA "[B]~ ('\u2030' ^2) ),
+                bty = "L",
+                las = 1,
+                ylim = c(0,4),
+                main = "SIBER ellipses on each group",
+                clr = my_clrs)
+
+# Add red x's for the ML estimated SEA-c
+points(1:ncol(SEA.B.tripl), group.ML.tripl[3,], col="black", pch = "x", lwd = 3)
+
+dev.copy(pdf, "figures/SEAb.plots.pdf", width = 8, height = 6)
+dev.off()
+
+```
+
+One can calculate the overlap between two (or more) ellipses. In the first instance, this overlap is simply the area, in units of per mil squared, contained by the shape that lies within the overlapping region. This overlap is most easily calculated by using the SEAc of each ellipse.
+
+The overlap between the SEAc for groups 1.2 and 1.3 is given by:
+```{r}
+############ 40% overlap
+### diploid
+overlap.G1.2.G1.3.dip <- maxLikOverlap("diploid.host", "diploid.symbiont", dipl.siber, p = 0.40, n =)
+
+prop.of.first.dip <- as.numeric(overlap.G1.2.G1.3.dip["overlap"] / overlap.G1.2.G1.3.dip["area.1"])
+print(prop.of.first.dip) # 97% overlap of host with symb
+
+prop.of.second.dip <- as.numeric(overlap.G1.2.G1.3.dip["overlap"] / overlap.G1.2.G1.3.dip["area.2"])
+print(prop.of.second.dip) # 39% overlap of symb with host
+
+
+### triploid
+overlap.G1.2.G1.3.trip <- maxLikOverlap("triploid.host", "triploid.symbiont", tripl.siber, p = 0.40, n =)
+
+prop.of.first.trip <- as.numeric(overlap.G1.2.G1.3.trip["overlap"] / overlap.G1.2.G1.3.trip["area.1"])
+print(prop.of.first.trip) # 95% overlap host with symbiont
+
+prop.of.second.trip <- as.numeric(overlap.G1.2.G1.3.trip["overlap"] / overlap.G1.2.G1.3.trip["area.2"])
+print(prop.of.second.trip) # 43% overlap of symb with symb
+
+
+############ 95% overlap
+### diploid
+overlap.G1.2.G1.3.dip <- maxLikOverlap("diploid.host", "diploid.symbiont", dipl.siber, p = 0.95, n =)
+
+prop.of.first.dip <- as.numeric(overlap.G1.2.G1.3.dip["overlap"] / overlap.G1.2.G1.3.dip["area.1"])
+print(prop.of.first.dip) # 100% overlap host with symbiont
+
+prop.of.second.dip <- as.numeric(overlap.G1.2.G1.3.dip["overlap"] / overlap.G1.2.G1.3.dip["area.2"])
+print(prop.of.second.dip) # 40% overlap of symb with host
+
+
+### triploid
+overlap.G1.2.G1.3.trip <- maxLikOverlap("triploid.host", "triploid.symbiont", tripl.siber, p = 0.95, n =)
+
+prop.of.first.trip <- as.numeric(overlap.G1.2.G1.3.trip["overlap"] / overlap.G1.2.G1.3.trip["area.1"])
+print(prop.of.first.trip) # 95% overlap host with symbiont
+
+prop.of.second.trip <- as.numeric(overlap.G1.2.G1.3.trip["overlap"] / overlap.G1.2.G1.3.trip["area.2"])
+print(prop.of.second.trip) # 45% overlap of symb with symb
+
+
+```
+Diploid = 97% overlap at 0.40 SEAc, 100% at 0.95 SEAc
+Triploid = 95% overlap at 0.40 SEAc, 100% at 0.95 SEAc
+
+```{r}
+prop.of.second.dip <- as.numeric(overlap.G1.2.G1.3.dip["overlap"] / overlap.G1.2.G1.3.dip["area.2"])
+print(prop.of.second.dip) # 39% (p=0.4), 41% (p=0.95)
+
+prop.of.second.trip <- as.numeric(overlap.G1.2.G1.3.trip["overlap"] / overlap.G1.2.G1.3.trip["area.2"])
+print(prop.of.second.trip) # 43% (p=0.4), 45% (p=0.95)
+```
+
+A problem with this simple overlap calculation is that it yields a point-estimate of overlap based on the maximum likelihood estimated SEA_c. One can instead calculate a distribution of overlap based on the posterior distributions of the fitted ellipses. It can be a bit slow to calculate this overlap, so you may want to drop the number of draws if your computer is slow.
+
+```{r}
+######### Bayesian overlap for diploid
+bayes.overlap.G2.G3.dip <- bayesianOverlap("diploid.host", "diploid.symbiont",  dipl.ellipses.posterior, 
+                                       draws = 20, p.interval = 0.95,
+                                       n = 360)
+mean(bayes.overlap.G2.G3.dip$overlap / (bayes.overlap.G2.G3.dip$area1 + bayes.overlap.G2.G3.dip$area2))
+
+######### Bayesian overlap for triploid
+bayes.overlap.G2.G3.trip <- bayesianOverlap("triploid.host", "triploid.symbiont",  tripl.ellipses.posterior, 
+                                       draws = 20, p.interval = 0.95,
+                                       n = 360)
+mean(bayes.overlap.G2.G3.trip$overlap / (bayes.overlap.G2.G3.trip$area1 + bayes.overlap.G2.G3.trip$area2))
+
+```
+
+bayes overlap = 0.26 for diploid, 0.26 for triploid
+
+
+The ggplot2 function `stat_ellipse` allows us to easily add ellipses, of varying **level** which corresponds to the prediction interval. This function defaults to using the t-distribution so we will override this and specify the normal distribution as is more fitting with the SIBER approach. We can also change the colour palettes used for the color of objects, and fills. I favour the "viridis" package for this, and use the discrete scale versions `scale_colour_viridis_d()` here as we have categorical groups specified here as "community" and "group". I find the last colour of this spectrum which is a plain yellow, does not render very well, especially with the fill overlaying the points and so choose to end its palette at 0.9 with `end = 0.9`.
+
+```{r Siber overlap}
+######## PLOTS
+first.dipl.plot <- ggplot(data = dipl.siber.data, aes(iso1, iso2)) +
+  geom_point(aes(color = group, shape = group), size = 2)+
+  ylab(expression(paste(delta^{15}, "N (\u2030)")))+
+  xlab(expression(paste(delta^{13}, "C (\u2030)"))) + 
+  theme(text = element_text(size=15)) +
+  ylim(3,6.5)+
+  xlim(-21,-13)+
+  theme_minimal() + ggtitle("Diploid") +
+  theme(strip.text = element_text(face = "italic"))
+
+first.tripl.plot <- ggplot(data = tripl.siber.data, aes(iso1, iso2)) +
+  geom_point(aes(color = group, shape = group), size = 2)+
+  ylab(expression(paste(delta^{15}, "N (\u2030)")))+
+  xlab(expression(paste(delta^{13}, "C (\u2030)"))) + 
+  theme(text = element_text(size=15)) +
+  ylim(3,6.5)+
+  xlim(-21,-13)+
+  theme_minimal() + ggtitle("Triploid") +
+  theme(strip.text = element_text(face = "italic"))
+
+
+# use our ellipse function to generate the ellipses for plotting, decide how big an ellipse you want to draw
+p.ell <- 0.40 
+
+# create our plot based on first.plot above, adding the stat_ellipse() geometry. 
+# We specify thee ellipse to be plotted using the polygon geom, with fill and edge colour defined by Taxon as a grouping variable, using the normal distribution and with a quite high level of transparency.
+
+##### add ellipse diploid
+ellipse.dipl.plot <- first.dipl.plot + 
+  stat_ellipse(aes(group = interaction(community, group), 
+               fill = group, 
+               color = group), 
+               linewidth=0.7,
+               alpha = 0, 
+               level = 0.95,
+               type = "norm",
+               geom = "polygon",
+               linetype = "dotted") +
+  stat_ellipse(aes(group = interaction(community, group), 
+               fill = group, 
+               color = group),
+               linewidth=0.7,
+               alpha = 0.2, 
+               level = p.ell,
+               type = "norm",
+               geom = "polygon") + 
+               scale_color_manual(values=c("mediumpurple", "lightseagreen"))+
+               scale_fill_manual(values=c("mediumpurple", "lightseagreen"))
+               coord_fixed()
+  #scale_colour_viridis_d(end = 0.5) + 
+  #scale_fill_viridis_d(end = 0.5) + coord_fixed()
+
+##### add ellipse triploid
+ellipse.tripl.plot <- first.tripl.plot + 
+  stat_ellipse(aes(group = interaction(community, group), 
+               fill = group, 
+               color = group), 
+               linewidth=0.7,
+               alpha = 0, 
+               level = 0.95,
+               type = "norm",
+               geom = "polygon",
+               linetype = "dotted") +
+  stat_ellipse(aes(group = interaction(community, group), 
+               fill = group, 
+               color = group), 
+               linewidth=0.7,
+               alpha = 0.2, 
+               level = p.ell,
+               type = "norm",
+               geom = "polygon") + 
+               scale_color_manual(values=c("mediumpurple", "lightseagreen"))+
+               scale_fill_manual(values=c("mediumpurple", "lightseagreen"))
+               coord_fixed()
+
+               
+ellipse.plots<-plot_grid(ellipse.dipl.plot + guides(color="none", fill="none", shape="none"), 
+          ellipse.tripl.plot, rel_widths=c(0.75, 1), nrow=1, ncol=2)
+
+ellipse.plots
+dev.copy(pdf, "figures/SEA_overlap.pdf", width = 9, height = 6)
+dev.off()
+
+```
+
+#### Hotelling
+```{r}
+source('scripts/Turner.et.al.ecology.source.r') #load in necessary functions
+
+############ diploid
+Y.dip<-as.matrix(hotellings.dipl.data[,2:3])
+
+# Designate groups
+group.dip<-as.factor(hotellings.dipl.data[,1])
+gp.dip<-length(levels(group.dip)) # number of groups
+n.comp.dip<-(gp.dip^2 - gp.dip)/2 # number of possible comparisons
+rownames(Y.dip)<-group.dip 
+
+dip.lm.gp<-lm(Y.dip~group.dip, x=T, model=T) # for estimating group means
+
+#This outputs the centroid of one group and distance in x and y to the centroid of the second group
+dip.res.gp<-resid(dip.lm.gp) # residuals of groups from group means
+dip.yhat.gp<-predict(dip.lm.gp) # predicted values
+
+dip.lm.gp.red<-lm(Y.dip~1) # this is the model reduced by the group factor: only estimates an overall mean
+
+# DISPERSION MEASURES
+dip.ex1<-ds.prep(dip.res.gp, group.dip) # see source file
+dip.ex1.ds<-disp.stat(dip.ex1) # see source file
+
+# GROUP MEANS
+gp.m.dip<-group.means(Y.dip, group.dip) # finds the group means for the raw data
+
+############ triploid
+Y.trip<-as.matrix(hotellings.tripl.data[,2:3])
+
+# Designate groups
+group.trip<-as.factor(hotellings.tripl.data[,1])
+gp.trip<-length(levels(group.trip)) # number of groups
+n.comp.trip<-(gp.trip^2 - gp.trip)/2 # number of possible comparisons
+rownames(Y.trip)<-group.trip 
+
+trip.lm.gp<-lm(Y.trip~group.trip, x=T,model=T) # for estimating group means
+
+#This outputs the centroid of one group and distance in x and y to the centroid of the second group
+trip.res.gp<-resid(trip.lm.gp) # residuals of groups from group means
+trip.yhat.gp<-predict(trip.lm.gp) # predicted values
+
+trip.lm.gp.red<-lm(Y.trip~1) # this is the model reduced by the group factor: only estimates an overall mean
+
+# DISPERSION MEASURES
+trip.ex1<-ds.prep(trip.res.gp, group.trip) # see source file
+trip.ex1.ds<-disp.stat(trip.ex1) # see source file
+
+# GROUP MEANS
+gp.m.trip<-group.means(Y.trip, group.trip) # finds the group means for the raw data
+
+```
+
+```{r}
+#ADDENDUM: HOTELLING'S T2
+#Each group comparison one at a time
+
+############### diploid
+#Comparing groups 1 (host) and 2 (symbiont) 
+gp.m.dif.dip<-gp.m.dip[1,]-gp.m.dip[2,] # vector for difference between means
+gn.dip<-tapply(group.dip, group.dip, length) # group sizes
+e.dip<-resid(dip.lm.gp)
+E.dip<-t(e.dip) %*% e.dip
+n.dip<-nrow(e.dip)
+k.dip<-dip.lm.gp$rank
+V.dip<-(1/(n.dip-k.dip))*E.dip # This is the pooled within-group vcv
+
+d.dip<-gp.m.dif.dip
+dim(d.dip)<-c(1, length(d.dip))
+
+D.dip<-d.dip %*% solve(V.dip) %*% t(d.dip) # Squared Mahalanobis Distance
+
+H.T2.dip<-(gn.dip[1]*gn.dip[2])/(gn.dip[1] + gn.dip[2])*D.dip # Hotelling T2
+
+F.dip<-(gn.dip[1] + gn.dip[2]-2-1)/((gn.dip[1] + gn.dip[2])*2)*H.T2.dip # Convert to an F value
+
+P.dip<-df(F.dip,2,(gn.dip[1] + gn.dip[2]-2-1)) # P-value
+
+P.dip # = 0.26
+
+
+############# triploid
+#Comparing groups 1 (host) and 2 (symbiont) 
+gp.m.dif.trip<-gp.m.trip[1,] - gp.m.trip[2,] # vector for difference between means
+gn.trip<-tapply(group.trip, group.trip, length) # group sizes
+e.trip<-resid(trip.lm.gp)
+E.trip<-t(e.trip) %*% e.trip
+n.trip<-nrow(e.trip)
+k.trip<-trip.lm.gp$rank
+V.trip<-(1/(n.trip-k.trip)) * E.trip # This is the pooled within-group vcv
+
+d.trip<-gp.m.dif.trip
+dim(d.trip)<-c(1,length(d.trip))
+
+D.trip<-d.trip %*% solve(V.trip) %*% t(d.trip) # Squared Mahalanobis Distance
+
+H.T2.trip<-(gn.trip[1]*gn.trip[2])/(gn.trip[1] + gn.trip[2])*D.trip # Hotelling T2
+
+F.trip<-(gn.trip[1]+gn.trip[2]-2-1)/((gn.trip[1] + gn.trip[2])*2)*H.T2.trip # Convert to an F value
+
+P.trip<-df(F.trip,2,(gn.trip[1] + gn.trip[2]-2-1)) # P-value
+
+P.trip # = 0.354
+```
+
+## Experimental data
+
+### Growth
+```{r}
+########
+######## Calculate Coral Dry Weights from Buoyant Weight (Davies 1989)
+########
+
+## dry weight of object = weight in water + ((weight in air * Density of water) / Density of object)
+
+## Density of aragonite = 2.93 g/cm-3 (Jokiel et al. 1978)
+## avg sea water density = 1.023 g cm-3
+
+
+#### Using function rho from seacarb package
+library(seacarb)
+## rho(S = 35, T = 25, P = 0)
+
+# load dataset 
+bw <- read.csv("data/growth.R.csv")
+
+bw <- bw %>% 
+  select(plug.ID:salinity) %>% 
+  mutate(bw, sw_dens = rho(S = salinity, T = temp, P = 0), # calculate density of seawater
+         sw_dens = sw_dens * 0.001) %>%  # convert from kg cm-3 to g cm-3
+  drop_na(sw_dens) %>%
+  mutate(n = 1:nrow(.))
+
+# add skeletal densities
+bw <- bw %>% 
+  select(-n) %>%
+  mutate(skel_dens = 2.93) %>% # add skeletal densities
+  mutate(dry.mass.g = wet.mass.g / (1 - (sw_dens/skel_dens)))
+
+### split by time
+bw.T0<-bw %>% filter(time.point=="T0")
+bw.T1<-bw %>% filter(time.point=="T1")
+
+bw.T1$plug.ID == bw.T0$plug.ID # all rows match
+
+bw.T1.reduce<- bw.T1 %>% 
+  mutate(end.dry.mass.g = dry.mass.g) %>% 
+  select(end.dry.mass.g, total.days)
+
+bw.T0.reduced<- bw.T0 %>% select(-date, -time.point, -total.days)
+bw.long<-cbind(bw.T0.reduced, bw.T1.reduce)
+
+# calculate net change in mass
+bw.long$growth<- (bw.long$end.dry.mass.g - bw.long$dry.mass.g)
+
+# standard change
+bw.std<- bw.long[(bw.long$type=="standard"),]
+mean.std<-mean(bw.std$growth) # = 0.02763588
+
+bw.corals<- bw.long[(bw.long$type=="coral"),]
+
+bw.corals$growth.corrected.mg.d<-((bw.corals$growth-0.02763588)/bw.corals$total.days)*1000
+
+# save output
+write.csv(bw.corals, "output/BW.final.csv")
+
+###### read in surface area from photogram at T0
+SA<-read.csv("data/SA.R.csv")
+SA.reduc<- SA %>% select(plug.ID, coral.cm2) # select column needed
+
+bw.corals.reduc<-bw.corals %>% select(plug.ID, treatment, ploidy, genotype, tank, growth.corrected.mg.d)
+
+# merge by plug.ID
+bw.SA<- merge(bw.corals.reduc, SA.reduc, by = "plug.ID", all.x = TRUE)
+bw.SA$mg.CaCO3.cm2.d<- bw.SA$growth.corrected.mg.d / bw.SA$coral.cm2
+bw.SA<-na.omit(bw.SA) # remove any NAs
+bw.SA<-bw.SA[!(bw.SA$plug.ID=="64" | bw.SA$plug.ID=="902"),] # growth low
+
+# model
+anova(lmer(mg.CaCO3.cm2.d~treatment*ploidy+ (1|tank), data=bw.SA), type=2)
+
+# plot growth
+pd <- position_dodge(0.71) #offset for error bars and columns
+
+##### growth boxplot 
+growth.plot<-ggplot(bw.SA, aes(treatment, mg.CaCO3.cm2.d, fill=ploidy)) +
+  geom_jitter(width=0.25, aes(color=ploidy), alpha=0.7)+
+  geom_boxplot(outlier.size = 0.7, alpha=0.6)+
+  ylab(expression(paste("net growth (mg CaCO3 cm-2 d-1)")))+
+  xlab("Treatment")+ theme_bw()+
+  ylim(0,1)+
+  scale_fill_manual(values=c("goldenrod", "plum4")) +
+  scale_color_manual(values=c("goldenrod", "plum4"))
+
+growth.plot
+dev.copy(pdf, "figures/growth.pdf", width = 5, height = 8)
+dev.off()
+
+########### if looking at means +/-SE
+grow.mean<-aggregate(mg.CaCO3.cm2.d~treatment + ploidy, data=bw.SA, FUN=mean)
+grow.n<-aggregate(mg.CaCO3.cm2.d~treatment + ploidy, data=bw.SA, FUN=length)
+grow.SD<-aggregate(mg.CaCO3.cm2.d~treatment + ploidy, data=bw.SA, FUN=sd)
+
+grow.df<-cbind(grow.mean, (grow.SD$mg.CaCO3.cm2.d/sqrt(grow.n$mg.CaCO3.cm2.d)))
+colnames(grow.df)<-c("treatment", "ploidy", "mean", "SE")
+
+# plot it
+growth.mean.plot<-ggplot(grow.df, aes(x=treatment, y=mean, color=ploidy, fill=ploidy)) +
+  geom_point(position = pd, size=3.5) +
+  geom_errorbar(aes(ymin=mean-SE, ymax=mean+SE),size=.5, width=0, position=pd) +
+  ylab(expression(paste("net growth (mg CaCO3 cm-2 d-1)")))+
+  ylim(0,0.7)+
+  xlab("Treatment")+ theme_bw()
+```
+
+### PAM
+```{r}
+PAM<-read.csv("data/PAM.R.csv")
+
+# model
+anova(lmer(FvFm.mean~treatment*ploidy+ (1|tank), data=PAM), type=2)
+
+##### growth boxplot 
+PAM.plot<-ggplot(PAM, aes(treatment, FvFm.mean, fill=ploidy)) +
+  geom_jitter(width=0.35, aes(color=ploidy), alpha=0.7)+
+  geom_boxplot(outlier.size = 0.7, alpha=0.6)+
+  ylab(expression(paste("Fv/Fm")))+
+  xlab("Treatment")+ theme_bw()+
+  ylim(0, 0.8)+
+  scale_fill_manual(values=c("goldenrod", "plum4")) +
+  scale_color_manual(values=c("goldenrod", "plum4"))
+
+PAM.plot
+dev.copy(pdf, "figures/PAM.pdf", width = 5, height = 8)
+dev.off()
+```
+
 
