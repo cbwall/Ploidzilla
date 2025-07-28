@@ -65,12 +65,14 @@ symb.df<- symb.df %>% filter(!sample.ID == "278D") # oddly high counts
 symb.df$cells.cm2<-as.numeric(symb.df$cells.cm2)
 
 ##### symbiont cells
-symb.plot<-ggplot(symb.df, aes(ploidy, cells.cm2, fill=ploidy)) +
+symb.plot<-ggplot(symb.df, aes(ploidy, cells.cm2, fill=ploidy,)) +
+  geom_jitter(width=0.1, aes(color=ploidy), alpha=0.7)+
   geom_boxplot(outlier.size = 0.7, alpha=0.6)+
-  scale_fill_manual(values=c("goldenrod", "plum3")) +
-  ylab(expression(paste("symbiont cells (cm"^{2},")")))+
+  scale_fill_manual(values=c("goldenrod", "plum4")) +
+  scale_color_manual(values=c("goldenrod", "plum4")) +
+  ylab(expression(paste("symbiont cells (cm"^{-2},")")))+
   scale_y_continuous(limits= c(0, 1000000), labels = scales::scientific) +
-  xlab("Ploidy State")+ theme_bw() + guides(fill="none")
+  xlab("Ploidy State")+ theme_bw() + guides(fill="none", color="none")
 
 symb.plot
 dev.copy(pdf, "figures/symb.field.pdf", width = 5, height = 8)
@@ -706,7 +708,10 @@ growth.plot<-ggplot(bw.SA, aes(treatment, mg.CaCO3.cm2.d, fill=ploidy)) +
 growth.plot
 dev.copy(pdf, "figures/growth.pdf", width = 5, height = 8)
 dev.off()
+```
 
+
+```{r}
 ########### if looking at means +/-SE
 grow.mean<-aggregate(mg.CaCO3.cm2.d~treatment + ploidy, data=bw.SA, FUN=mean)
 grow.n<-aggregate(mg.CaCO3.cm2.d~treatment + ploidy, data=bw.SA, FUN=length)
@@ -746,4 +751,54 @@ dev.copy(pdf, "figures/PAM.pdf", width = 5, height = 8)
 dev.off()
 ```
 
+### Cytometry
+```{r}
+cyto<-read.csv("data/cytometry.R.csv")
+mean.fluor<-aggregate(Fluores.cell.ml~ plug.ID, data=cyto, FUN=mean)
+colnames(mean.fluor)<-c("plug.ID", "symb.cells.ml")
+
+SD.fluor<-aggregate(Fluores.cell.ml~ plug.ID, data=cyto, FUN=sd)
+
+#### read in blastate
+blast<-read.csv("data/blast.R.csv")
+blast<- blast %>% select(plug.ID, blastate.ml) # reduce columns
+
+# merge with other data
+cyto.SA<- merge(SA, mean.fluor, by = "plug.ID", all.x = TRUE)
+cyto.SA<-na.omit(cyto.SA)
+
+# merge in blastate
+cyto.SA<- merge(cyto.SA, blast, by = "plug.ID", all.x = TRUE)
+
+# make cells/cm2
+cyto.SA$symb.dens<- (cyto.SA$symb.cells.ml*cyto.SA$blastate.ml)/cyto.SA$coral.cm2
+
+##### symbcells boxplot 
+symb.plot.tank<-ggplot(cyto.SA, aes(treatment, symb.dens, fill=ploidy)) +
+  #geom_jitter(width=0.15, aes(color=ploidy), alpha=0.7)+
+  geom_boxplot(outlier.size = 0.7, alpha=0.6)+
+  ylab(expression(paste("tank symbiont cells (cm"^{-2},")")))+
+  xlab("Treatment")+ theme_bw()+
+  scale_y_continuous(limits= c(0, 300000), labels = scales::scientific) +
+  scale_fill_manual(values=c("goldenrod", "plum4")) +
+  scale_color_manual(values=c("goldenrod", "plum4"))
+
+# model
+Anova(lm(symb.cells.ml~treatment*ploidy, data=cyto.SA), type=2)
+
+symb.plot.tank
+dev.copy(pdf, "figures/symb.cells.tank.pdf", width = 5, height = 8)
+dev.off()
+
+```
+
+```{r}
+# combine field and tank plot
+plot_grid(symb.plot, 
+          symb.plot.tank + guides(fill="none"), 
+          PAM.plot + guides(fill="none", color="none"),
+          growth.plot, ncol=4, rel_widths = c(0.8, 1, 1, 1.25))
+dev.print(pdf, "figures/combined.plot.pdf", width = 15, height = 7)
+dev.off()
+```
 
