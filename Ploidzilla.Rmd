@@ -690,7 +690,10 @@ bw.SA<-na.omit(bw.SA) # remove any NAs
 bw.SA<-bw.SA[!(bw.SA$plug.ID=="64" | bw.SA$plug.ID=="902"),] # growth low
 
 # model
-anova(lmer(mg.CaCO3.cm2.d~treatment*ploidy+ (1|tank), data=bw.SA), type=2)
+anova(lmer(mg.CaCO3.cm2.d~treatment*ploidy+ (1|tank) + (1|genotype), data=bw.SA), type=2) # no effect
+ranova(lmer(mg.CaCO3.cm2.d~treatment*ploidy+ (1|tank) + (1|genotype), data=bw.SA)) #genotype and tank significant
+
+anova(lm(mg.CaCO3.cm2.d~treatment+ploidy, data=bw.SA))
 
 # plot growth
 pd <- position_dodge(0.71) #offset for error bars and columns
@@ -734,7 +737,10 @@ growth.mean.plot<-ggplot(grow.df, aes(x=treatment, y=mean, color=ploidy, fill=pl
 PAM<-read.csv("data/PAM.R.csv")
 
 # model
-anova(lmer(FvFm.mean~treatment*ploidy+ (1|tank), data=PAM), type=2)
+anova(lmer(FvFm.mean~treatment*ploidy+ (1|tank) + (1|genotype), data=PAM), type=2) # no effect
+ranova(lmer(FvFm.mean~treatment*ploidy+ (1|tank) + (1|genotype), data=PAM)) # tank signif, genotype almost
+
+anova(lm(FvFm.mean~treatment*ploidy, data=PAM)) # no effect
 
 ##### growth boxplot 
 PAM.plot<-ggplot(PAM, aes(treatment, FvFm.mean, fill=ploidy)) +
@@ -761,17 +767,23 @@ SD.fluor<-aggregate(Fluores.cell.ml~ plug.ID, data=cyto, FUN=sd)
 
 #### read in blastate
 blast<-read.csv("data/blast.R.csv")
-blast<- blast %>% select(plug.ID, blastate.ml) # reduce columns
+blast<- blast %>% dplyr::select(plug.ID, blastate.ml) # reduce columns
 
 # merge with other data
-cyto.SA<- merge(SA, mean.fluor, by = "plug.ID", all.x = TRUE)
-cyto.SA<-na.omit(cyto.SA)
+cyto.blast<- merge(blast, mean.fluor, by = "plug.ID", all.x = TRUE)
+cyto.blast<-na.omit(cyto.blast)
 
 # merge in blastate
-cyto.SA<- merge(cyto.SA, blast, by = "plug.ID", all.x = TRUE)
+cyto.SA<- merge(cyto.blast, SA, by = "plug.ID", all.x = TRUE)
 
 # make cells/cm2
 cyto.SA$symb.dens<- (cyto.SA$symb.cells.ml*cyto.SA$blastate.ml)/cyto.SA$coral.cm2
+
+n<-aggregate(symb.dens~ploidy+treatment, data=cyto.SA, FUN=length)
+
+### model
+anova(lmer(symb.dens~treatment*ploidy+ (1|tank) + (1|genotype), data=cyto.SA), type=2) # treatment
+ranova(lmer(symb.dens~treatment*ploidy+ (1|tank) + (1|genotype), data=cyto.SA)) # not signif
 
 ##### symbcells boxplot 
 symb.plot.tank<-ggplot(cyto.SA, aes(treatment, symb.dens, fill=ploidy)) +
