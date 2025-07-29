@@ -122,7 +122,7 @@ d15N.h.s.plot<-ggplot(bulk.df, aes(ploidy, d15N.h.s, fill=ploidy)) +
   geom_hline(yintercept=0, linetype="dashed", color = "gray50") +
   geom_boxplot(outlier.size = 0.7, alpha=0.6)+
   scale_fill_manual(values=c("palegreen4", "palegreen4")) +
-  ylab(expression(paste(delta^{13},  C[H-S], " (\u2030)")))+
+  ylab(expression(paste(delta^{15},  N[H-S], " (\u2030)")))+
   ylim(-2, 2) +
   xlab("Ploidy State")+ theme_bw() +
   theme(strip.text = element_text(face = "italic")) + guides(fill="none")
@@ -811,6 +811,18 @@ plot_grid(symb.plot,
           PAM.plot + guides(fill="none", color="none"),
           growth.plot, ncol=4, rel_widths = c(0.8, 1, 1, 1.25))
 dev.print(pdf, "figures/combined.plot.pdf", width = 15, height = 7)
+dev.off()
+
+# panel 1
+plot_grid(symb.plot, EA.plots, ncol=2, rel_widths = c(0.7, 1.5))
+dev.print(pdf, "figures/panel1.pdf", width = 15, height = 9)
+dev.off()
+
+# pan el 2
+plot_grid(symb.plot.tank + guides(fill="none"), 
+          PAM.plot + guides(fill="none", color="none"),
+          growth.plot, ncol=3, rel_widths = c(1, 1, 1.25))
+dev.print(pdf, "figures/panel2.pdf", width = 15, height = 9)
 dev.off()
 ```
 
