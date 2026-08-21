@@ -28,9 +28,9 @@ if (!require("pacman")) install.packages("pacman") # for rapid install if not in
 # use pacman to load all the packages you are missing!
 pacman::p_load("knitr", "lme4", "lmerTest", "tidyverse", "effects", "plyr", "plotrix", "car","gridExtra", "cowplot", "tools", "mgcv", "gratia", "MASS", "stats", "sjstats", "coin", "emmeans", "ggplot2", "mda", "nortest", "reshape2", "gmm", "propagate","ggmap", "RgoogleMaps", "R2jags", "MixSIAR","GGally", "ggbiplot", "ggcorrplot", "vegan", "devtools", "multcompView", "scales", "pairwiseAdonis", "ggcorrplot", "ggord", "dplyr", "ordr", "remotes", "devtools", "pak", "tidyr", "SIBER", "Hotelling", "seacarb")
 
-remotes::install_github("pmartinezarbizu/pairwiseAdonis/pairwiseAdonis")
-remotes::install_github("brianstock/MixSIAR", dependencies=T)
-devtools::install_github("andrewljackson/SIBER@master", build_vignettes = TRUE)
+#remotes::install_github("pmartinezarbizu/pairwiseAdonis/pairwiseAdonis")
+#remotes::install_github("brianstock/MixSIAR", dependencies=T)
+#devtools::install_github("andrewljackson/SIBER@master", build_vignettes = TRUE)
 
 #pak::pak("r-lib/devtools") # if having an issue with devtools, can load the development version
 
@@ -53,6 +53,7 @@ Fig.formatting <-
 ## In situ data
 ### Symbiont density
 ```{r}
+# symbiont counts from microscopy and wax dipping
 symb.df<-read.csv("data/symb.R.csv")
 samplesize<-aggregate(cells.cm2~ploidy, data=symb.df, FUN=length) # 29 diploid, 22 triploid)
 
@@ -67,12 +68,12 @@ symb.df$cells.cm2<-as.numeric(symb.df$cells.cm2)
 ##### symbiont cells
 symb.plot<-ggplot(symb.df, aes(ploidy, cells.cm2, fill=ploidy,)) +
   geom_jitter(width=0.1, aes(color=ploidy), alpha=0.7)+
-  geom_boxplot(outlier.size = 0.7, alpha=0.6)+
+  geom_boxplot(outlier.shape = NA, alpha=0.6)+
   scale_fill_manual(values=c("goldenrod", "plum4")) +
   scale_color_manual(values=c("goldenrod", "plum4")) +
   ylab(expression(paste("symbiont cells (cm"^{-2},")")))+
   scale_y_continuous(limits= c(0, 1000000), labels = scales::scientific) +
-  xlab("Ploidy State")+ theme_bw() + guides(fill="none", color="none")
+  xlab("Ploidy State")+ theme_bw() + guides(fill="none", color="none") + ggtitle("In situ corals")
 
 symb.plot
 dev.copy(pdf, "figures/symb.field.pdf", width = 5, height = 8)
@@ -713,8 +714,7 @@ dev.copy(pdf, "figures/growth.pdf", width = 5, height = 8)
 dev.off()
 ```
 
-
-```{r}
+```{r growth means}
 ########### if looking at means +/-SE
 grow.mean<-aggregate(mg.CaCO3.cm2.d~treatment + ploidy, data=bw.SA, FUN=mean)
 grow.n<-aggregate(mg.CaCO3.cm2.d~treatment + ploidy, data=bw.SA, FUN=length)
@@ -733,7 +733,7 @@ growth.mean.plot<-ggplot(grow.df, aes(x=treatment, y=mean, color=ploidy, fill=pl
 ```
 
 ### PAM
-```{r}
+```{r PAM}
 PAM<-read.csv("data/PAM.R.csv")
 
 # model
@@ -744,11 +744,11 @@ anova(lm(FvFm.mean~treatment*ploidy, data=PAM)) # no effect
 
 ##### growth boxplot 
 PAM.plot<-ggplot(PAM, aes(treatment, FvFm.mean, fill=ploidy)) +
-  geom_jitter(width=0.35, aes(color=ploidy), alpha=0.7)+
-  geom_boxplot(outlier.size = 0.7, alpha=0.6)+
+ geom_point(aes(color=ploidy), alpha=0.7, position=position_jitterdodge())+
+  geom_boxplot(outlier.shape = NA, alpha=0.7)+
   ylab(expression(paste("Fv/Fm")))+
   xlab("Treatment")+ theme_bw()+
-  ylim(0, 0.8)+
+  ylim(0.2, 0.8)+
   scale_fill_manual(values=c("goldenrod", "plum4")) +
   scale_color_manual(values=c("goldenrod", "plum4"))
 
@@ -757,7 +757,7 @@ dev.copy(pdf, "figures/PAM.pdf", width = 5, height = 8)
 dev.off()
 ```
 
-### Cytometry
+### Cytometry: tank
 ```{r}
 cyto<-read.csv("data/cytometry.R.csv")
 mean.fluor<-aggregate(Fluores.cell.ml~ plug.ID, data=cyto, FUN=mean)
@@ -773,27 +773,32 @@ blast<- blast %>% dplyr::select(plug.ID, blastate.ml) # reduce columns
 cyto.blast<- merge(blast, mean.fluor, by = "plug.ID", all.x = TRUE)
 cyto.blast<-na.omit(cyto.blast)
 
+SA<-read.csv("data/SA.R.csv")
+SA.T1<- SA[(SA$time.point=="T1"),] # only T1 data
+
 # merge in blastate
-cyto.SA<- merge(cyto.blast, SA, by = "plug.ID", all.x = TRUE)
+cyto.SA<- merge(cyto.blast, SA.T1, by = "plug.ID", all.x = TRUE)
 
 # make cells/cm2
-cyto.SA$symb.dens<- (cyto.SA$symb.cells.ml*cyto.SA$blastate.ml)/cyto.SA$coral.cm2
+cyto.SA$symb.dens<- (cyto.SA$symb.cells.ml*cyto.SA$blastate.ml)/cyto.SA$surface.area.cm2
+cyto.SA$symb.dens<-round(cyto.SA$symb.dens, 0)
+cyto.SA<- cyto.SA[!(cyto.SA$plug.ID=="60"),] # SA is 0, to be fixed
 
 n<-aggregate(symb.dens~ploidy+treatment, data=cyto.SA, FUN=length)
 
 ### model
 anova(lmer(symb.dens~treatment*ploidy+ (1|tank) + (1|genotype), data=cyto.SA), type=2) # treatment
-ranova(lmer(symb.dens~treatment*ploidy+ (1|tank) + (1|genotype), data=cyto.SA)) # not signif
+ranova(lmer(symb.dens~treatment*ploidy+ (1|tank) + (1|genotype), data=cyto.SA)) # genotype signif
 
 ##### symbcells boxplot 
 symb.plot.tank<-ggplot(cyto.SA, aes(treatment, symb.dens, fill=ploidy)) +
-  #geom_jitter(width=0.15, aes(color=ploidy), alpha=0.7)+
-  geom_boxplot(outlier.size = 0.7, alpha=0.6)+
+  geom_point(aes(color=ploidy), alpha=0.7, position=position_jitterdodge())+
+  geom_boxplot(outlier.shape = NA, alpha=0.7)+
   ylab(expression(paste("tank symbiont cells (cm"^{-2},")")))+
   xlab("Treatment")+ theme_bw()+
-  scale_y_continuous(limits= c(0, 300000), labels = scales::scientific) +
+  scale_y_continuous(limits= c(0, 600000), labels = scales::scientific) +
   scale_fill_manual(values=c("goldenrod", "plum4")) +
-  scale_color_manual(values=c("goldenrod", "plum4"))
+  scale_color_manual(values=c("goldenrod", "plum4")) + ggtitle("Tank corals")
 
 # model
 Anova(lm(symb.cells.ml~treatment*ploidy, data=cyto.SA), type=2)
@@ -801,6 +806,8 @@ Anova(lm(symb.cells.ml~treatment*ploidy, data=cyto.SA), type=2)
 symb.plot.tank
 dev.copy(pdf, "figures/symb.cells.tank.pdf", width = 5, height = 8)
 dev.off()
+
+write.csv(cyto.SA, "output/cyto.df.csv")
 
 ```
 
@@ -824,5 +831,62 @@ plot_grid(symb.plot.tank + guides(fill="none"),
           growth.plot, ncol=3, rel_widths = c(1, 1, 1.25))
 dev.print(pdf, "figures/panel2.pdf", width = 15, height = 9)
 dev.off()
+```
+
+### Feeding trials
+```{r}
+feed<-read.csv("data/feeding.csv")
+feed.simple<- feed %>% select(treatment, tank, genotype, ploidy, plug.ID, 
+                          prey.capture.h, surface.area.cm2, prey.cap.h.cm2)
+
+# Convert specific columns by name 
+feed.simple <- feed.simple %>% mutate(across(c(prey.capture.h, surface.area.cm2, prey.cap.h.cm2), as.numeric))
+feed.simple<-feed.simple[(feed.simple$prey.cap.h.cm2>=1),] # remove any negative values
+
+feed.df<-na.omit(feed.simple) # remove NAs
+
+# add size class category and order levels
+feed.df$size<-ifelse(feed.df$surface.area.cm2< 20, "small", "medium")
+feed.df$size<-factor(feed.df$size, levels=c("small", "medium"))
+sum<-aggregate(ploidy~size, data=feed.df, FUN=length)
+
+### inspects some points that may be culled
+feed.df<-feed.df[!(feed.df$prey.cap.h.cm2>150 | feed.df$prey.cap.h.cm2<15),] # remove any high outliers
+#feed.x<-feed.df[(feed.df$size=="medium" & feed.df$prey.cap.h.cm2>90),] # remove any high outliers
+
+
+### FEEDING BY SIZE EFFECT
+anova(lm(prey.capture.h~surface.area.cm2, data=feed.df)) # size matters
+ggplot(feed.df, aes(x=surface.area.cm2, y=prey.capture.h))+
+  geom_point()+
+  geom_smooth(method="glm", method.args=list(family=gaussian(link="log")))
+       
+
+# model
+anova(lmer(prey.cap.h.cm2~treatment*ploidy*size+ (1|tank) + (1|genotype), data=feed.df), type=3) # no effect
+ranova(lmer(prey.cap.h.cm2~treatment*ploidy+ (1|tank) + (1|genotype), data=feed.df)) # no random effect best
+
+Anova(lm(prey.cap.h.cm2~treatment+ploidy+size, data=feed.df), type=2) # no effect
+anova(lm(prey.cap.h.cm2~size, data=feed.df)) # no effect
+
+feed.mod<-lm(prey.cap.h.cm2~treatment+ploidy+size, data=feed.df)
+posthoc.feed<-emmeans(feed.mod, ~ploidy)
+multcomp::cld(posthoc.feed, Letters=LETTERS)
+
+##### growth boxplot 
+feed.plot<-ggplot(feed.df, aes(treatment, prey.cap.h.cm2, fill=ploidy)) +
+ geom_point(aes(color=ploidy), alpha=0.7, position=position_jitterdodge())+
+  geom_boxplot(outlier.shape = NA, alpha=0.7)+
+  ylab(expression(paste("prey.cap h-1 cm-2")))+
+  xlab("Treatment")+ theme_bw()+
+  ylim(0, 170)+
+  scale_fill_manual(values=c("goldenrod", "plum4")) +
+  scale_color_manual(values=c("goldenrod", "plum4"))+
+  facet_wrap(~size)
+
+feed.plot
+dev.copy(pdf, "figures/feeding.pdf", width = 5, height = 8)
+dev.off()
+
 ```
 
