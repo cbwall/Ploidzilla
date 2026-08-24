@@ -1,7 +1,11 @@
-#### Respirometry carpentry #######
-install.packages("respR")
-library("respR")
-library("hms")
+#### #### #### #### #### #### #### 
+#### Respirometry carpentry ######
+#### #### #### #### #### #### #### 
+
+# load packages
+if (!require("pacman")) install.packages("pacman") # for rapid install if not in library
+# use pacman to load all the packages you are missing!
+pacman::p_load("respR", "hms")
 
 ########### import data csv from software
 r.dat<-read.csv("data/respirometry all days.csv", skip=1) # skip top line from export
@@ -34,6 +38,15 @@ r.dat<- r.dat[(r.dat$date > "2025-07-15"),]
 day1<-r.dat[(r.dat$date == "2025-07-16"),]
 day2<-r.dat[(r.dat$date == "2025-07-17"),]
 
+# pull in metadata
+run.info<-read.csv("data/respo run data.csv")
+run.info.simple<- run.info %>% # trims to the main details we want
+  select(day, run, tank.ID, tank.treatment, plug.ID, channel, start.cut.time, end.cut.time)
+
+# make a run summary
+run.info.clean <- run.info.simple %>% filter(!(start.cut.time== "")) %>%
+  select(-plug.ID, -channel, -tank.ID) 
+
 # separate each day into its individual batch "runs" of 10 chamber
 # this sucks, but ultimately a human eye and note-taking is the best appraoch
 
@@ -60,11 +73,6 @@ day2<- day2 %>%
 r.dat2<-rbind(day1, day2)
 r.dat2$time<-as.character(r.dat2$time) # return to  time format
 
-# pull in metadata
-run.info<-read.csv("data/respo run data.csv")
-run.info.simple<- run.info %>% 
-  select(day, run, tank.ID, tank.treatment, plug.ID, channel)
-
 # merge, fist by run, then by channel
 merge.dat<-merge(r.dat2, run.info.simple, by = c("run", "channel"))
 
@@ -89,8 +97,8 @@ merge.dat<- merge.dat %>%
 write.csv(merge.dat, "output/cleaned_resp_dat.csv")
 
 # split runs up to individual dfs based on "run" as factor levels
-run_list <- split(merge.dat, merge.dat$run)
-list2env(run_list, envir = .GlobalEnv) # now as "run.1", "run.2"... "run.13" in environment
+# run_list <- split(merge.dat, merge.dat$run)
+# list2env(run_list, envir = .GlobalEnv) # now as "run.1", "run.2"... "run.13" in environment
 
 
 ###########################################################
@@ -107,67 +115,6 @@ wide_RespR <- RespR.simple %>%
 
 write.csv(wide_RespR, "output/cleaned_resp_dat_wide.csv")
 
-################ ################ 
-# not the most elegant, but it preserved the wide-format needed for RespR
-# be aware a number of samples appear to have been recorded in %a.s., so will need to recalculate these
-# isolate the runs of 10 and make their own dfs with nas removed.
-
-###########################################################
-##### separate data into individual runs of 10 channels ### 
-########################################################### 
-
-run1_wide <- wide_RespR %>% 
- select(time.min, starts_with("run.1_"), -contains("control"))
-run1_wide<-na.omit(run1_wide)
-
-run2_wide <- wide_RespR %>% 
-  select(time.min,starts_with("run.2"), -contains("control"))
-run2_wide<-na.omit(run2_wide)
-
-run3_wide <- wide_RespR %>% 
-  select(time.min,starts_with("run.3"), -contains("control"))
-run3_wide<-na.omit(run3_wide)
-
-run4_wide <- wide_RespR %>% 
-  select(time.min,starts_with("run.4"), -contains("control"))
-run4_wide<-na.omit(run4_wide)
-
-run5_wide <- wide_RespR %>%   ## ALL controls
-  select(time.min,starts_with("run.5"))
-run5_wide<-na.omit(run5_wide)
-
-run6_wide <- wide_RespR %>% 
-  select(time.min,starts_with("run.6"), -contains("control"))
-run6_wide<-na.omit(run6_wide)
-
-run7_wide <- wide_RespR %>% 
-  select(time.min,starts_with("run.7"), -contains("control"))
-run7_wide<-na.omit(run7_wide)
-
-run8_wide <- wide_RespR %>%   ## ALL controls
-  select(time.min,starts_with("run.8"))
-run8_wide<-na.omit(run8_wide)
-
-run9_wide <- wide_RespR %>% 
-  select(time.min,starts_with("run.9"), -contains("control"))
-run9_wide<-na.omit(run9_wide)
-
-run10_wide <- wide_RespR %>% 
-  select(time.min,starts_with("run.10"), -contains("control"))
-run10_wide<-na.omit(run10_wide)
-
-run11_wide <- wide_RespR %>% 
-  select(time.min,starts_with("run.11"), -contains("control"))
-run11_wide<-na.omit(run11_wide)
-
-run12_wide <- wide_RespR %>%  ## ALL controls
-  select(time.min,starts_with("run.12"))
-run12_wide<-na.omit(run12_wide)
-
-run13_wide <- wide_RespR %>%  ## controls
-  select(time.min,starts_with("run.13"))
-run13_wide<-na.omit(run13_wide) 
-
 
 ######################## ######################## ##############
 ###### ###### ###### isolate bg controls ######## ##############
@@ -175,7 +122,8 @@ run13_wide<-na.omit(run13_wide)
 
 amb.bg <- wide_RespR %>% 
   select(time.min, contains("AT"))
-amb.bg<- amb.bg %>% select(-"run.10_AT.control.10") %>% na.omit(amb.bg)
+amb.bg<- amb.bg %>% select(-"run.10_AT.control.10", 
+                           -"run.11_AT.control.3.b") %>% na.omit(amb.bg)
 
 HT.bg <- wide_RespR %>% 
   select(time.min, contains("HT"))  %>% 
@@ -187,7 +135,7 @@ HT.bg <- wide_RespR %>%
 ###### background adjust and inspect
 # no clear light effect but the probes show different response time, so need to inspect manually
 # ambient 
-amb_bg_insp<-inspect(amb.bg, time = 1, oxygen = 2:29)
+amb_bg_insp<-inspect(amb.bg, time = 1, oxygen = 2:28)
 amb.bg.calc<-calc_rate.bg(amb_bg_insp)
 
 # heated
@@ -204,9 +152,9 @@ df<-amb.bg # define df
 output_list<- vector("list") # make a blank list to store results
 ncol(df) # see how many column you have, this will be your length of the list
 
-## run a sample, change df # and output list #
-var<-colnames(df[,2]) # set your column each time, starts at "2", time is "1"
-insp<-inspect(df, time = "time.min", oxygen = var)
+## run a sample
+var<-colnames(df[,2]) # set your column each time
+insp<-inspect(df, time = "time.min", oxygen = var) # set your column each time, starts at "2", time is "1"
 calc<-calc_rate(insp, from = 5, to = 15, by = "time") # unfortuantely this takes a human eye
 output_list[[1]]<-calc$summary
 
@@ -219,37 +167,37 @@ output_list[[2]]<-calc$summary
 ## run a sample
 var<-colnames(df[,4]) # set your column each time
 insp<-inspect(df, time = "time.min", oxygen = var)
-calc<-calc_rate(insp, from = 5, to = 15, by = "time") # unfortuantely this takes a human eye
+calc<-calc_rate(insp, from = 10, to = 20, by = "time")
 output_list[[3]]<-calc$summary
 
 ## run a sample
 var<-colnames(df[,5]) # set your column each time
 insp<-inspect(df, time = "time.min", oxygen = var)
-calc<-calc_rate(insp, from = 10, to = 20, by = "time")
+calc<-calc_rate(insp, from = 5, to = 24, by = "time")
 output_list[[4]]<-calc$summary
 
 ## run a sample
 var<-colnames(df[,6]) # set your column each time
 insp<-inspect(df, time = "time.min", oxygen = var)
-calc<-calc_rate(insp, from = 5, to = 24, by = "time")
+calc<-calc_rate(insp, from = 5, to = 20, by = "time")
 output_list[[5]]<-calc$summary
 
 ## run a sample
 var<-colnames(df[,7]) # set your column each time
 insp<-inspect(df, time = "time.min", oxygen = var)
-calc<-calc_rate(insp, from = 5, to = 20, by = "time")
+calc<-calc_rate(insp, from = 10, to = 22, by = "time")
 output_list[[6]]<-calc$summary
 
 ## run a sample
 var<-colnames(df[,8]) # set your column each time
 insp<-inspect(df, time = "time.min", oxygen = var)
-calc<-calc_rate(insp, from = 10, to = 22, by = "time")
+calc<-calc_rate(insp, from = 10, to = 25, by = "time")
 output_list[[7]]<-calc$summary
 
 ## run a sample
 var<-colnames(df[,9]) # set your column each time
 insp<-inspect(df, time = "time.min", oxygen = var)
-calc<-calc_rate(insp, from = 10, to = 25, by = "time")
+calc<-calc_rate(insp, from = 5, to = 20, by = "time")
 output_list[[8]]<-calc$summary
 
 ## run a sample
@@ -266,14 +214,14 @@ output_list[[10]]<-calc$summary
 
 ## run a sample
 var<-colnames(df[,12]) # set your column each time
-insp<-inspect(df, time = "time.min", oxygen = var)
-calc<-calc_rate(insp, from = 5, to = 20, by = "time")
+insp<-inspect(df, time = "time.min", oxygen = var) # a bit wonky
+calc<-calc_rate(insp, from =2, to = 10, by = "time")
 output_list[[11]]<-calc$summary
 
 ## run a sample
 var<-colnames(df[,13]) # set your column each time
-insp<-inspect(df, time = "time.min", oxygen = var) # a bit wonky
-calc<-calc_rate(insp, from =2, to = 10, by = "time")
+insp<-inspect(df, time = "time.min", oxygen = var)
+calc<-calc_rate(insp, from = 2, to = 15, by = "time")
 output_list[[12]]<-calc$summary
 
 ## run a sample
@@ -294,16 +242,16 @@ insp<-inspect(df, time = "time.min", oxygen = var)
 calc<-calc_rate(insp, from = 2, to = 15, by = "time")
 output_list[[15]]<-calc$summary
 
-## run a sample
+## run a sample 
 var<-colnames(df[,17]) # set your column each time
 insp<-inspect(df, time = "time.min", oxygen = var)
-calc<-calc_rate(insp, from = 2, to = 15, by = "time")
+calc<-calc_rate(insp, from = 3, to = 10, by = "time") #### this one is weird, maybe check notes
 output_list[[16]]<-calc$summary
 
-## run a sample 
+## run a sample
 var<-colnames(df[,18]) # set your column each time
 insp<-inspect(df, time = "time.min", oxygen = var)
-calc<-calc_rate(insp, from = 3, to = 10, by = "time") #### this one is weird, maybe check notes
+calc<-calc_rate(insp, from = 2, to = 15, by = "time")
 output_list[[17]]<-calc$summary
 
 ## run a sample
@@ -315,25 +263,25 @@ output_list[[18]]<-calc$summary
 ## run a sample
 var<-colnames(df[,20]) # set your column each time
 insp<-inspect(df, time = "time.min", oxygen = var)
-calc<-calc_rate(insp, from = 2, to = 15, by = "time")
+calc<-calc_rate(insp, from = 4, to = 15, by = "time")
 output_list[[19]]<-calc$summary
 
 ## run a sample
 var<-colnames(df[,21]) # set your column each time
 insp<-inspect(df, time = "time.min", oxygen = var)
-calc<-calc_rate(insp, from = 4, to = 15, by = "time")
+calc<-calc_rate(insp, from = 5, to = 18, by = "time")
 output_list[[20]]<-calc$summary
 
 ## run a sample
 var<-colnames(df[,22]) # set your column each time
 insp<-inspect(df, time = "time.min", oxygen = var)
-calc<-calc_rate(insp, from = 5, to = 18, by = "time")
+calc<-calc_rate(insp, from = 8, to = 20, by = "time")
 output_list[[21]]<-calc$summary
 
 ## run a sample
 var<-colnames(df[,23]) # set your column each time
 insp<-inspect(df, time = "time.min", oxygen = var)
-calc<-calc_rate(insp, from = 8, to = 20, by = "time")
+calc<-calc_rate(insp, from = 5, to = 15, by = "time")
 output_list[[22]]<-calc$summary
 
 ## run a sample
@@ -357,20 +305,14 @@ output_list[[25]]<-calc$summary
 ## run a sample
 var<-colnames(df[,27]) # set your column each time
 insp<-inspect(df, time = "time.min", oxygen = var)
-calc<-calc_rate(insp, from = 5, to = 15, by = "time")
+calc<-calc_rate(insp, from = 8, to = 15, by = "time")
 output_list[[26]]<-calc$summary
 
 ## run a sample
 var<-colnames(df[,28]) # set your column each time
 insp<-inspect(df, time = "time.min", oxygen = var)
-calc<-calc_rate(insp, from = 8, to = 15, by = "time")
-output_list[[27]]<-calc$summary
-
-## run a sample
-var<-colnames(df[,29]) # set your column each time
-insp<-inspect(df, time = "time.min", oxygen = var)
 calc<-calc_rate(insp, from = 5, to = 15, by = "time")
-output_list[[28]]<-calc$summary
+output_list[[27]]<-calc$summary
 
 ################# ################# ################# ################# 
 ################# working with the output ################# ###########
@@ -386,7 +328,8 @@ output_df<- output_df %>%
 
 ####### #######  RENAME and get rate means #######  ####### 
 bg.amb.rates<-output_df  # rename to match df at the top
-bg.amb.rates.means<-mean(bg.amb.rates$rate); print(bg.amb.rates.means) # -0.0324
+bg.amb.rates.means<-mean(bg.amb.rates$rate); print(bg.amb.rates.means) # -0.0406
+ # run.11_AT.control.3.b a weird one, very + vs. others
 
 ######################## ######################## ################
 ############### HIGH TEMP background rates ########### 
@@ -530,18 +473,78 @@ output_df<- output_df %>%
 ####### #######  RENAME and get rate means #######  ####### 
 bg.HT.rates<-output_df  # rename to match df at the top
 bg.HT.rates.means<-mean(bg.HT.rates$rate); print(bg.HT.rates.means) # -0.0841
-######################## ######################## ##########
-
-
-
 
 
 ######################## ######################## ################
 ############### RUNN SAMPLES for R and Pnet rates ################ 
 ######################## ######################## ################
 
+# not the most elegant, but it preserved the wide-format needed for RespR
+# be aware a number of samples appear to have been recorded in %a.s., so will need to recalculate these
+# isolate the runs of 10 and make their own dfs with nas removed.
 
+###########################################################
+##### separate data into individual runs of 10 channels ### 
+########################################################### 
+
+# remove controls, keeping only samples
+
+run1_wide <- wide_RespR %>% 
+  select(time.min, starts_with("run.1_"), -contains("control"))
+run1_wide<-na.omit(run1_wide)
+
+run2_wide <- wide_RespR %>% 
+  select(time.min,starts_with("run.2"), -contains("control"))
+run2_wide<-na.omit(run2_wide)
+
+run3_wide <- wide_RespR %>% 
+  select(time.min,starts_with("run.3"), -contains("control"))
+run3_wide<-na.omit(run3_wide)
+
+run4_wide <- wide_RespR %>% 
+  select(time.min,starts_with("run.4"), -contains("control"))
+run4_wide<-na.omit(run4_wide)
+
+# run5_wide <- wide_RespR %>%   ## ALL controls
+# select(time.min,starts_with("run.5"))
+# run5_wide<-na.omit(run5_wide)
+
+run6_wide <- wide_RespR %>% 
+  select(time.min,starts_with("run.6"), -contains("control"))
+run6_wide<-na.omit(run6_wide)
+
+run7_wide <- wide_RespR %>% 
+  select(time.min,starts_with("run.7"), -contains("control"))
+run7_wide<-na.omit(run7_wide)
+
+#run8_wide <- wide_RespR %>%   ## ALL controls
+# select(time.min,starts_with("run.8"))
+# run8_wide<-na.omit(run8_wide)
+
+run9_wide <- wide_RespR %>% 
+  select(time.min,starts_with("run.9"), -contains("control"))
+run9_wide<-na.omit(run9_wide)
+
+run10_wide <- wide_RespR %>% 
+  select(time.min,starts_with("run.10"), -contains("control"))
+run10_wide<-na.omit(run10_wide)
+
+run11_wide <- wide_RespR %>% 
+  select(time.min,starts_with("run.11"), -contains("control"))
+run11_wide<-na.omit(run11_wide)
+
+# run12_wide <- wide_RespR %>%  ## ALL controls
+# select(time.min,starts_with("run.12"))
+# run12_wide<-na.omit(run12_wide)
+
+# run13_wide <- wide_RespR %>%  ## controls
+# select(time.min,starts_with("run.13"))
+# run13_wide<-na.omit(run13_wide) 
+
+
+######## ######## #####
 ######## run 3 ######## 
+######## ######## #####
 
 # resp output
 out.ls.run.3.resp <- vector("list")
@@ -621,8 +624,24 @@ r3.21.pnet<-calc_rate(r3.21, from = 25, to = 37, by = "time")
 out.ls.run.3.resp[[9]]<-r3.21.resp$summary
 out.ls.run.3.pnet[[9]]<-r3.21.pnet$summary
 
+names(out.ls.run.3.resp)<-colnames(run3_wide[-1])
+names(out.ls.run.3.pnet)<-colnames(run3_wide[-1])
 
+#combine outputs into a df and add names
+df_r3.resp<-data.frame(do.call(rbind, out.ls.run.3.resp))
+df_r3.resp<- df_r3.resp %>%
+  mutate(names= names(out.ls.run.3.resp),
+         sample.or.bg= "sample")
+
+df_r3.pnet<-data.frame(do.call(rbind, out.ls.run.3.pnet))
+df_r3.pnet<- df_r3.pnet %>%
+  mutate(names= names(out.ls.run.3.pnet),
+         sample.or.bg= "sample")
+
+
+######## ######## ######## 
 ######## run 4 ######## 
+######## ######## ######## 
 
 # resp output
 out.ls.run.4.resp <- vector("list")
@@ -701,6 +720,31 @@ r4.28.pnet<-calc_rate(r4.28, from = 20, to = 32, by = "time")
 
 out.ls.run.4.resp[[9]]<-r4.28.resp$summary
 out.ls.run.4.pnet[[9]]<-r4.28.pnet$summary
+
+##
+r4.23<-inspect(run4_wide, time = "time.min", oxygen = "run.4_23")
+r4.23.resp<-calc_rate(r4.23, from = 5, to = 15, by = "time")
+r4.23.pnet<-calc_rate(r4.23, from = 22, to = 32, by = "time")
+
+out.ls.run.4.resp[[10]]<-r4.28.resp$summary
+out.ls.run.4.pnet[[10]]<-r4.28.pnet$summary
+
+#### combine 
+names(out.ls.run.4.resp)<-colnames(run4_wide[-1])
+names(out.ls.run.4.pnet)<-colnames(run4_wide[-1])
+
+#combine outputs into a df and add names
+df_r4.resp<-data.frame(do.call(rbind, out.ls.run.4.resp))
+df_r4.resp<- df_r4.resp %>%
+  mutate(names= names(out.ls.run.4.resp),
+         sample.or.bg= "sample")
+
+df_r4.pnet<-data.frame(do.call(rbind, out.ls.run.4.pnet))
+df_r4.pnet<- df_r3.pnet %>%
+  mutate(names= names(out.ls.run.4.pnet),
+         sample.or.bg= "sample")
+
+
 
 
 
