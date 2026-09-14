@@ -664,6 +664,8 @@ calcP<-calc_rate(insp, from = 28, to = 38, by = "time")
 out.ls.run.3.resp[[9]]<-calcR$summary
 out.ls.run.3.pnet[[9]]<-calcP$summary
 
+rate_adj <- adjust_rate(calcR, by = bg_rate, method = "mean")
+
 ##### pull together for output
 names(out.ls.run.3.resp)<-colnames(run3_wide[-1])
 names(out.ls.run.3.pnet)<-colnames(run3_wide[-1])
@@ -679,6 +681,13 @@ df_r3.pnet<- df_r3.pnet %>%
   mutate(names= names(out.ls.run.3.pnet),
          sample.or.bg= "sample")
 
+### to correct for controls, use the correct control rates for amb or HT
+bg.amb.rates.means
+bg.HT.rates.means
+
+# run 3 is a HT run (can see info in "run.info")
+df_r3.resp$resp.bg.corr<- df_r3.resp$rate - bg.HT.rates.means
+df_r3.pnet$pnet.bg.corr<- df_r3.pnet$rate - bg.HT.rates.means
 
 ######## ######## ######## 
 ######## run 4 ######## 
