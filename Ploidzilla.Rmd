@@ -639,7 +639,7 @@ library(seacarb)
 bw <- read.csv("data/growth.R.csv")
 
 bw <- bw %>% 
-  select(plug.ID:salinity) %>% 
+  dplyr::select(plug.ID:salinity) %>% 
   mutate(bw, sw_dens = rho(S = salinity, T = temp, P = 0), # calculate density of seawater
          sw_dens = sw_dens * 0.001) %>%  # convert from kg cm-3 to g cm-3
   drop_na(sw_dens) %>%
@@ -680,18 +680,22 @@ write.csv(bw.corals, "output/BW.final.csv")
 
 ###### read in surface area from photogram at T0
 SA<-read.csv("data/SA.R.csv")
-SA.reduc<- SA %>% select(plug.ID, coral.cm2) # select column needed
+SA.reduc<- SA %>% select(plug.ID, surface.area.cm2) # select column needed
 
 bw.corals.reduc<-bw.corals %>% select(plug.ID, treatment, ploidy, genotype, tank, growth.corrected.mg.d)
 
 # merge by plug.ID
 bw.SA<- merge(bw.corals.reduc, SA.reduc, by = "plug.ID", all.x = TRUE)
-bw.SA$mg.CaCO3.cm2.d<- bw.SA$growth.corrected.mg.d / bw.SA$coral.cm2
+bw.SA$mg.CaCO3.cm2.d<- bw.SA$growth.corrected.mg.d / bw.SA$surface.area.cm2
 bw.SA<-na.omit(bw.SA) # remove any NAs
 bw.SA<-bw.SA[!(bw.SA$plug.ID=="64" | bw.SA$plug.ID=="902"),] # growth low
 
+# format metadata
+make.fac<-c("treatment", "plug.ID", "ploidy", "tank", "genotype")
+bw.SA[make.fac]<-lapply(bw.SA[make.fac], factor) # make all these factors
+
 # model
-anova(lmer(mg.CaCO3.cm2.d~treatment*ploidy+ (1|tank) + (1|genotype), data=bw.SA), type=2) # no effect
+anova(lmer(mg.CaCO3.cm2.d~ploidy*treatment+ (1|tank) + (1|genotype), data=bw.SA), type=2) # no effect
 ranova(lmer(mg.CaCO3.cm2.d~treatment*ploidy+ (1|tank) + (1|genotype), data=bw.SA)) #genotype and tank significant
 
 anova(lm(mg.CaCO3.cm2.d~treatment+ploidy, data=bw.SA))
