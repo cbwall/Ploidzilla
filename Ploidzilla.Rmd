@@ -698,15 +698,15 @@ bw.SA[make.fac]<-lapply(bw.SA[make.fac], factor) # make all these factors
 anova(lmer(mg.CaCO3.cm2.d~ploidy*treatment+ (1|tank) + (1|genotype), data=bw.SA), type=2) # no effect
 ranova(lmer(mg.CaCO3.cm2.d~treatment*ploidy+ (1|tank) + (1|genotype), data=bw.SA)) #genotype and tank significant
 
-anova(lm(mg.CaCO3.cm2.d~treatment+ploidy, data=bw.SA))
+anova(lm(mg.CaCO3.cm2.d~treatment*ploidy, data=bw.SA))
 
 # plot growth
 pd <- position_dodge(0.71) #offset for error bars and columns
 
 ##### growth boxplot 
 growth.plot<-ggplot(bw.SA, aes(treatment, mg.CaCO3.cm2.d, fill=ploidy)) +
-  geom_jitter(width=0.25, aes(color=ploidy), alpha=0.7)+
-  geom_boxplot(outlier.size = 0.7, alpha=0.6)+
+  geom_point(aes(color=ploidy), alpha=0.7, position=position_jitterdodge())+
+  geom_boxplot(outlier.shape = NA, alpha=0.7)+
   ylab(expression(paste("net growth (mg CaCO3 cm-2 d-1)")))+
   xlab("Treatment")+ theme_bw()+
   ylim(0,1)+
@@ -732,7 +732,7 @@ growth.mean.plot<-ggplot(grow.df, aes(x=treatment, y=mean, color=ploidy, fill=pl
   geom_point(position = pd, size=3.5) +
   geom_errorbar(aes(ymin=mean-SE, ymax=mean+SE),size=.5, width=0, position=pd) +
   ylab(expression(paste("net growth (mg CaCO3 cm-2 d-1)")))+
-  ylim(0,0.7)+
+  ylim(0.2,0.8)+
   xlab("Treatment")+ theme_bw()
 ```
 
@@ -867,11 +867,11 @@ ggplot(feed.df, aes(x=surface.area.cm2, y=prey.capture.h))+
        
 
 # model
-anova(lmer(prey.cap.h.cm2~treatment*ploidy*size+ (1|tank) + (1|genotype), data=feed.df), type=3) # no effect
-ranova(lmer(prey.cap.h.cm2~treatment*ploidy+ (1|tank) + (1|genotype), data=feed.df)) # no random effect best
+anova(lmer(prey.cap.h.cm2~treatment*ploidy*size+ (1|tank) + (1|genotype), data=feed.df), type=3) # size effect
+ranova(lmer(prey.cap.h.cm2~treatment*ploidy+ (1|tank) + (1|genotype), data=feed.df)) # no random effects
 
-Anova(lm(prey.cap.h.cm2~treatment+ploidy+size, data=feed.df), type=2) # no effect
-anova(lm(prey.cap.h.cm2~size, data=feed.df)) # no effect
+Anova(lm(prey.cap.h.cm2~treatment*ploidy*size, data=feed.df), type=2) # ploidy and size effect
+anova(lm(prey.cap.h.cm2~size, data=feed.df)) # size effect
 
 feed.mod<-lm(prey.cap.h.cm2~treatment+ploidy+size, data=feed.df)
 posthoc.feed<-emmeans(feed.mod, ~ploidy)
@@ -881,7 +881,7 @@ multcomp::cld(posthoc.feed, Letters=LETTERS)
 feed.plot<-ggplot(feed.df, aes(treatment, prey.cap.h.cm2, fill=ploidy)) +
  geom_point(aes(color=ploidy), alpha=0.7, position=position_jitterdodge())+
   geom_boxplot(outlier.shape = NA, alpha=0.7)+
-  ylab(expression(paste("prey.cap h-1 cm-2")))+
+  ylab(expression(paste("prey.cap cm-2 h-1 ")))+
   xlab("Treatment")+ theme_bw()+
   ylim(0, 170)+
   scale_fill_manual(values=c("goldenrod", "plum4")) +
