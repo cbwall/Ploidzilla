@@ -664,7 +664,7 @@ calcP<-calc_rate(insp, from = 28, to = 38, by = "time")
 out.ls.run.3.resp[[9]]<-calcR$summary
 out.ls.run.3.pnet[[9]]<-calcP$summary
 
-rate_adj <- adjust_rate(calcR, by = bg_rate, method = "mean")
+#rate_adj <- adjust_rate(calcR, by = bg_rate, method = "mean")
 
 ##### pull together for output
 names(out.ls.run.3.resp)<-colnames(run3_wide[-1])
@@ -776,8 +776,8 @@ r4.23<-inspect(run4_wide, time = "time.min", oxygen = "run.4_23")
 r4.23.resp<-calc_rate(r4.23, from = 5, to = 15, by = "time")
 r4.23.pnet<-calc_rate(r4.23, from = 22, to = 32, by = "time")
 
-out.ls.run.4.resp[[10]]<-r4.28.resp$summary
-out.ls.run.4.pnet[[10]]<-r4.28.pnet$summary
+out.ls.run.4.resp[[10]]<-r4.23.resp$summary
+out.ls.run.4.pnet[[10]]<-r4.23.pnet$summary
 
 #### combine 
 names(out.ls.run.4.resp)<-colnames(run4_wide[-1])
@@ -790,7 +790,7 @@ df_r4.resp<- df_r4.resp %>%
          sample.or.bg= "sample")
 
 df_r4.pnet<-data.frame(do.call(rbind, out.ls.run.4.pnet))
-df_r4.pnet<- df_r3.pnet %>%
+df_r4.pnet<- df_r4.pnet %>%
   mutate(names= names(out.ls.run.4.pnet),
          sample.or.bg= "sample")
 
