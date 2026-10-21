@@ -100,7 +100,7 @@ chl.cell.plot<-ggplot(insitu.df, aes(ploidy, chl.pg.cell, fill=ploidy,)) +
 
 
 plot_grid(symb.plot, tot.chl.plot, chl.cell.plot, ncol=3)
-dev.copy(pdf, "figures/insitu_symb_chl_chlcell.pdf", width = 5, height = 9)
+dev.copy(pdf, "figures/insitu_symb_chl_chlcell.pdf", width = 10, height = 6)
 dev.off()
 ```
 
