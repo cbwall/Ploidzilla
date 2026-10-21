@@ -54,46 +54,71 @@ Fig.formatting <-
 ### Symbiont density
 ```{r}
 # symbiont counts from microscopy and wax dipping
-symb.df<-read.csv("data/symb.R.csv")
-samplesize<-aggregate(cells.cm2~ploidy, data=symb.df, FUN=length) # 29 diploid, 22 triploid)
+insitu.df<-read.csv("data/Ploidzilla_insitu data.csv")
+samplesize<-aggregate(plug.ID~ploidy, data=insitu.df, FUN=length) # 29 diploid, 23 triploid)
 
 # format metadata
-make.fac<-c("ploidy", "sample.ID")
-symb.df[make.fac]<-lapply(symb.df[make.fac], factor) # make all these factors
+make.fac<-c("ploidy", "plug.ID")
+insitu.df[make.fac]<-lapply(insitu.df[make.fac], factor) # make all these factors
 
-symb.df<- symb.df %>% filter(!sample.ID == "278D") # oddly high counts
+insitu.df<- insitu.df %>% filter(!plug.ID == "278D") # oddly high counts
 
-symb.df$cells.cm2<-as.numeric(symb.df$cells.cm2)
+insitu.df<- insitu.df %>% 
+  dplyr::mutate(cells.cm2 = ((symb.cells.ml * blastate.ml) /photgr.surface.area.cm2),
+                chl.ug.cm2 = ((total.chl.ug.mL *blastate.ml) /photgr.surface.area.cm2), 
+                chl.pg.cell = ((total.chl.ug.mL *1000000) /symb.cells.ml))
 
 ##### symbiont cells
-symb.plot<-ggplot(symb.df, aes(ploidy, cells.cm2, fill=ploidy,)) +
+symb.plot<-ggplot(insitu.df, aes(ploidy, cells.cm2, fill=ploidy,)) +
   geom_jitter(width=0.1, aes(color=ploidy), alpha=0.7)+
   geom_boxplot(outlier.shape = NA, alpha=0.6)+
   scale_fill_manual(values=c("goldenrod", "plum4")) +
   scale_color_manual(values=c("goldenrod", "plum4")) +
-  ylab(expression(paste("symbiont cells (cm"^{-2},")")))+
+  ylab(expression(paste("in situ symbiont cells (cm"^{-2},")")))+
   scale_y_continuous(limits= c(0, 1000000), labels = scales::scientific) +
-  xlab("Ploidy State")+ theme_bw() + guides(fill="none", color="none") + ggtitle("In situ corals")
+  xlab("Ploidy State")+ theme_bw() + guides(fill="none", color="none")
 
-symb.plot
-dev.copy(pdf, "figures/symb.field.pdf", width = 5, height = 8)
+##### total chlorophyll 
+tot.chl.plot<-ggplot(insitu.df, aes(ploidy, chl.ug.cm2, fill=ploidy,)) +
+  geom_jitter(width=0.1, aes(color=ploidy), alpha=0.7)+
+  geom_boxplot(outlier.shape = NA, alpha=0.6)+
+  scale_fill_manual(values=c("goldenrod", "plum4")) +
+  scale_color_manual(values=c("goldenrod", "plum4")) +
+  ylab(expression(paste("total chl a+c2 (cm"^{-2},")")))+
+  scale_y_continuous(limits= c(0, 5)) +
+  xlab("Ploidy State")+ theme_bw() + guides(fill="none", color="none")
+
+#####  chlorophyll per cell
+chl.cell.plot<-ggplot(insitu.df, aes(ploidy, chl.pg.cell, fill=ploidy,)) +
+  geom_jitter(width=0.1, aes(color=ploidy), alpha=0.7)+
+  geom_boxplot(outlier.shape = NA, alpha=0.6)+
+  scale_fill_manual(values=c("goldenrod", "plum4")) +
+  scale_color_manual(values=c("goldenrod", "plum4")) +
+  ylab(expression(paste("pg chl cell"^{-1},")")))+
+  scale_y_continuous(limits= c(0, 5)) +
+  xlab("Ploidy State")+ theme_bw() + guides(fill="none", color="none")
+
+
+plot_grid(symb.plot, tot.chl.plot, chl.cell.plot, ncol=3)
+dev.copy(pdf, "figures/insitu_symb_chl_chlcell.pdf", width = 5, height = 9)
 dev.off()
 ```
 
 ### Bulk EA data
 ```{r}
-bulk.df<-read.csv("data/iso.R.csv")
-C.samplesize<-aggregate(d13C~ploidy:fraction, data=bulk.df, FUN=length)
-N.samplesize<-aggregate(d15N~ploidy:fraction, data=bulk.df, FUN=length)
+iso.insit.df<-read.csv("data/Ploidzilla_insitu iso long.csv")
+
+C.samplesize<-aggregate(d13C~ploidy:fraction, data=iso.insit.df, FUN=length)
+N.samplesize<-aggregate(d15N~ploidy:fraction, data=iso.insit.df, FUN=length)
 
 # format metadata
-make.fac<-c("ploidy", "fraction", "sample.ID")
-bulk.df[make.fac]<-lapply(bulk.df[make.fac], factor) # make all these factors
+make.fac<-c("ploidy", "fraction", "plug.ID")
+iso.insit.df[make.fac]<-lapply(iso.insit.df[make.fac], factor) # make all these factors
 
 # figures
 
 ##### Carbon
-d13C.plot<-ggplot(bulk.df, aes(ploidy, d13C, fill=fraction)) +
+d13C.plot<-ggplot(iso.insit.df, aes(ploidy, d13C, fill=fraction)) +
   geom_boxplot(outlier.size = 0.7, alpha=0.6)+
   scale_fill_manual(values=c("skyblue", "gray50")) +
   ylab(expression(paste(delta^{13}, C, " (\u2030)")))+
@@ -101,7 +126,7 @@ d13C.plot<-ggplot(bulk.df, aes(ploidy, d13C, fill=fraction)) +
   xlab("Ploidy State")+ theme_bw() +
   theme(strip.text = element_text(face = "italic"))
 
-d13C.h.s.plot<-ggplot(bulk.df, aes(ploidy, d13C.h.s, fill=ploidy)) +
+d13C.h.s.plot<-ggplot(iso.insit.df, aes(ploidy, d13C.h.s, fill=ploidy)) +
   geom_hline(yintercept=0, linetype="dashed", color = "gray50") +
   geom_boxplot(outlier.size = 0.7, alpha=0.6)+
   scale_fill_manual(values=c("skyblue4", "skyblue4")) +
@@ -111,7 +136,7 @@ d13C.h.s.plot<-ggplot(bulk.df, aes(ploidy, d13C.h.s, fill=ploidy)) +
   theme(strip.text = element_text(face = "italic")) + guides(fill="none")
 
 ##### Nitrogen
-d15N.plot<-ggplot(bulk.df, aes(ploidy, d15N, fill=fraction)) +
+d15N.plot<-ggplot(iso.insit.df, aes(ploidy, d15N, fill=fraction)) +
   geom_boxplot(outlier.size = 0.7, alpha=0.6)+
   scale_fill_manual(values=c("olivedrab3", "gray50")) +
   ylab(expression(paste(delta^{15}, N, " (\u2030)")))+
@@ -119,7 +144,7 @@ d15N.plot<-ggplot(bulk.df, aes(ploidy, d15N, fill=fraction)) +
   xlab("Ploidy state")+ theme_bw() +
   theme(strip.text = element_text(face = "italic"))
 
-d15N.h.s.plot<-ggplot(bulk.df, aes(ploidy, d15N.h.s, fill=ploidy)) +
+d15N.h.s.plot<-ggplot(iso.insit.df, aes(ploidy, d15N.h.s, fill=ploidy)) +
   geom_hline(yintercept=0, linetype="dashed", color = "gray50") +
   geom_boxplot(outlier.size = 0.7, alpha=0.6)+
   scale_fill_manual(values=c("palegreen4", "palegreen4")) +
@@ -130,7 +155,7 @@ d15N.h.s.plot<-ggplot(bulk.df, aes(ploidy, d15N.h.s, fill=ploidy)) +
 
 ######C.N
 # inspect whether any contam
-d13C.CN.plot<-ggplot(bulk.df, aes(y=C.N, x=d13C, color=fraction)) +
+d13C.CN.plot<-ggplot(iso.insit.df, aes(y=C.N, x=d13C, color=fraction)) +
   geom_point(size=2.5)+
   scale_color_manual(values=c("coral", "gray50")) +
   scale_fill_manual(values=c("coral", "gray50")) +
@@ -140,7 +165,7 @@ d13C.CN.plot<-ggplot(bulk.df, aes(y=C.N, x=d13C, color=fraction)) +
   theme(strip.text = element_text(face = "italic"))
 
 # plot data
-C.N.plot<-ggplot(bulk.df, aes(ploidy, C.N, fill=fraction)) +
+C.N.plot<-ggplot(iso.insit.df, aes(ploidy, C.N, fill=fraction)) +
   geom_boxplot(outlier.size = 0.7, alpha=0.6)+
   scale_fill_manual(values=c("coral", "gray50")) +
   ylab("C:N")+
@@ -149,20 +174,23 @@ C.N.plot<-ggplot(bulk.df, aes(ploidy, C.N, fill=fraction)) +
   theme(strip.text = element_text(face = "italic"))
 
 ###### compile plots
-EA.plots<-plot_grid(d13C.plot, d13C.h.s.plot, 
+insitu.plots<-plot_grid(d13C.plot, d13C.h.s.plot, 
                     d15N.plot, d15N.h.s.plot, nrow=2, rel_widths=c(1,0.5))
-EA.plots
-dev.copy(pdf, "figures/EA.plots.pdf", width = 8, height = 8)
+insitu.plots
+dev.copy(pdf, "figures/insitu_isoplots.pdf", width = 8, height = 8)
 dev.off()
-
 ```
 
 ### SIBER
 intro to SIBER: https://cran.r-project.org/web/packages/SIBER/vignettes/Introduction-to-SIBER.html
 ```{r}
-SI.data <- bulk.df %>% 
-  dplyr::select(ploidy, sample.ID, fraction, d15N, d13C) %>%
+insit.iso.long<- read.csv("data/Ploidzilla_insitu iso long.csv")
+
+SI.data <- insit.iso.long %>% 
+  dplyr::select(ploidy, plug.ID, fraction, d15N, d13C) %>%
   dplyr::filter(!(is.na(d15N) | is.na(d13C)))
+
+SI.data$ploidy<-as.factor(SI.data$ploidy)
 
 generateSiberData()
 graphics.off()
@@ -181,20 +209,20 @@ dipl.siber.data$ploidy<-droplevels(dipl.siber.data$ploidy)
 tripl.siber.data$ploidy<-droplevels(tripl.siber.data$ploidy)
 
 # Rename the columns
-colnames(siber.data) <- c("iso1", "iso2", "group", "community")
+colnames(all.siber.data) <- c("iso1", "iso2", "group", "community")
 colnames(dipl.siber.data) <- c("iso1", "iso2", "group", "community")
 colnames(tripl.siber.data) <- c("iso1", "iso2", "group", "community")
 
 # Create the SIBER object
-all.siber <- createSiberObject(siber.data)
+all.siber <- createSiberObject(all.siber.data)
 dipl.siber <- createSiberObject(dipl.siber.data)
 tripl.siber <- createSiberObject(tripl.siber.data)
 
 # for Hotelling things
 hotellings.data <- data.frame(
-  group = as.numeric(as.factor(siber.data$group)),
-  x = siber.data$iso1,
-  y = siber.data$iso2)
+  group = as.numeric(as.factor(all.siber.data$group)),
+  x = all.siber.data$iso1,
+  y = all.siber.data$iso2)
 
 hotellings.dipl.data <- data.frame(
   group = as.numeric(as.factor(dipl.siber.data$group)),
@@ -348,25 +376,30 @@ One can calculate the overlap between two (or more) ellipses. In the first insta
 
 The overlap between the SEAc for groups 1.2 and 1.3 is given by:
 ```{r}
+# Overlap metric (units are per mil^2)
+# The overlap of the maximum likelihood fitted standard ellipses are 
+# estimated using
+
 ############ 40% overlap
 ### diploid
-overlap.G1.2.G1.3.dip <- maxLikOverlap("diploid.host", "diploid.symbiont", dipl.siber, p = 0.40, n =)
+overlap.G1.2.G1.3.dip <- maxLikOverlap("diploid.host", "diploid.symbiont", dipl.siber, p = 0.40, n =100)
 
+# overlap as a proportion of group 1 area (host)
 prop.of.first.dip <- as.numeric(overlap.G1.2.G1.3.dip["overlap"] / overlap.G1.2.G1.3.dip["area.1"])
-print(prop.of.first.dip) # 97% overlap of host with symb
+print(prop.of.first.dip) # 85% overlap of host with symb
 
 prop.of.second.dip <- as.numeric(overlap.G1.2.G1.3.dip["overlap"] / overlap.G1.2.G1.3.dip["area.2"])
-print(prop.of.second.dip) # 39% overlap of symb with host
+print(prop.of.second.dip) # 37% overlap of symb with host
 
 
 ### triploid
 overlap.G1.2.G1.3.trip <- maxLikOverlap("triploid.host", "triploid.symbiont", tripl.siber, p = 0.40, n =)
 
 prop.of.first.trip <- as.numeric(overlap.G1.2.G1.3.trip["overlap"] / overlap.G1.2.G1.3.trip["area.1"])
-print(prop.of.first.trip) # 95% overlap host with symbiont
+print(prop.of.first.trip) # 80% overlap host with symbiont
 
 prop.of.second.trip <- as.numeric(overlap.G1.2.G1.3.trip["overlap"] / overlap.G1.2.G1.3.trip["area.2"])
-print(prop.of.second.trip) # 43% overlap of symb with symb
+print(prop.of.second.trip) # 38% overlap of symb with symb
 
 
 ############ 95% overlap
@@ -374,20 +407,20 @@ print(prop.of.second.trip) # 43% overlap of symb with symb
 overlap.G1.2.G1.3.dip <- maxLikOverlap("diploid.host", "diploid.symbiont", dipl.siber, p = 0.95, n =)
 
 prop.of.first.dip <- as.numeric(overlap.G1.2.G1.3.dip["overlap"] / overlap.G1.2.G1.3.dip["area.1"])
-print(prop.of.first.dip) # 100% overlap host with symbiont
+print(prop.of.first.dip) #97% overlap host with symbiont
 
 prop.of.second.dip <- as.numeric(overlap.G1.2.G1.3.dip["overlap"] / overlap.G1.2.G1.3.dip["area.2"])
-print(prop.of.second.dip) # 40% overlap of symb with host
+print(prop.of.second.dip) # 43% overlap of symb with host
 
 
 ### triploid
 overlap.G1.2.G1.3.trip <- maxLikOverlap("triploid.host", "triploid.symbiont", tripl.siber, p = 0.95, n =)
 
 prop.of.first.trip <- as.numeric(overlap.G1.2.G1.3.trip["overlap"] / overlap.G1.2.G1.3.trip["area.1"])
-print(prop.of.first.trip) # 95% overlap host with symbiont
+print(prop.of.first.trip) # 97% overlap host with symbiont
 
 prop.of.second.trip <- as.numeric(overlap.G1.2.G1.3.trip["overlap"] / overlap.G1.2.G1.3.trip["area.2"])
-print(prop.of.second.trip) # 45% overlap of symb with symb
+print(prop.of.second.trip) # 47% overlap of symb with symb
 
 
 ```
@@ -396,10 +429,10 @@ Triploid = 95% overlap at 0.40 SEAc, 100% at 0.95 SEAc
 
 ```{r}
 prop.of.second.dip <- as.numeric(overlap.G1.2.G1.3.dip["overlap"] / overlap.G1.2.G1.3.dip["area.2"])
-print(prop.of.second.dip) # 39% (p=0.4), 41% (p=0.95)
+print(prop.of.second.dip) # 43% (p=0.4), 41% (p=0.95)
 
 prop.of.second.trip <- as.numeric(overlap.G1.2.G1.3.trip["overlap"] / overlap.G1.2.G1.3.trip["area.2"])
-print(prop.of.second.trip) # 43% (p=0.4), 45% (p=0.95)
+print(prop.of.second.trip) # 47% (p=0.4), 45% (p=0.95)
 ```
 
 A problem with this simple overlap calculation is that it yields a point-estimate of overlap based on the maximum likelihood estimated SEA_c. One can instead calculate a distribution of overlap based on the posterior distributions of the fitted ellipses. It can be a bit slow to calculate this overlap, so you may want to drop the number of draws if your computer is slow.
@@ -419,7 +452,7 @@ mean(bayes.overlap.G2.G3.trip$overlap / (bayes.overlap.G2.G3.trip$area1 + bayes.
 
 ```
 
-bayes overlap = 0.26 for diploid, 0.26 for triploid
+bayes overlap = 0.27 for diploid, 0.29 for triploid
 
 
 The ggplot2 function `stat_ellipse` allows us to easily add ellipses, of varying **level** which corresponds to the prediction interval. This function defaults to using the t-distribution so we will override this and specify the normal distribution as is more fitting with the SIBER approach. We can also change the colour palettes used for the color of objects, and fills. I favour the "viridis" package for this, and use the discrete scale versions `scale_colour_viridis_d()` here as we have categorical groups specified here as "community" and "group". I find the last colour of this spectrum which is a plain yellow, does not render very well, especially with the fill overlaying the points and so choose to end its palette at 0.9 with `end = 0.9`.
@@ -474,7 +507,7 @@ ellipse.dipl.plot <- first.dipl.plot +
                geom = "polygon") + 
                scale_color_manual(values=c("mediumpurple", "lightseagreen"))+
                scale_fill_manual(values=c("mediumpurple", "lightseagreen"))
-               coord_fixed()
+               #coord_fixed()
   #scale_colour_viridis_d(end = 0.5) + 
   #scale_fill_viridis_d(end = 0.5) + coord_fixed()
 
@@ -499,14 +532,14 @@ ellipse.tripl.plot <- first.tripl.plot +
                geom = "polygon") + 
                scale_color_manual(values=c("mediumpurple", "lightseagreen"))+
                scale_fill_manual(values=c("mediumpurple", "lightseagreen"))
-               coord_fixed()
+               #coord_fixed()
 
                
 ellipse.plots<-plot_grid(ellipse.dipl.plot + guides(color="none", fill="none", shape="none"), 
           ellipse.tripl.plot, rel_widths=c(0.75, 1), nrow=1, ncol=2)
 
 ellipse.plots
-dev.copy(pdf, "figures/SEA_overlap.pdf", width = 9, height = 6)
+dev.copy(pdf, "figures/SEA_overlap_insitu.pdf", width = 9, height = 6)
 dev.off()
 
 ```
@@ -532,12 +565,14 @@ dip.yhat.gp<-predict(dip.lm.gp) # predicted values
 
 dip.lm.gp.red<-lm(Y.dip~1) # this is the model reduced by the group factor: only estimates an overall mean
 
+
 # DISPERSION MEASURES
 dip.ex1<-ds.prep(dip.res.gp, group.dip) # see source file
 dip.ex1.ds<-disp.stat(dip.ex1) # see source file
+dip.ex1.ds
 
 # GROUP MEANS
-gp.m.dip<-group.means(Y.dip, group.dip) # finds the group means for the raw data
+gp.m.dip<-group.means(Y.dip, group.dip) # finds the group means for the raw data, where "1" = host and "2" = symbiont
 
 ############ triploid
 Y.trip<-as.matrix(hotellings.tripl.data[,2:3])
@@ -590,7 +625,7 @@ F.dip<-(gn.dip[1] + gn.dip[2]-2-1)/((gn.dip[1] + gn.dip[2])*2)*H.T2.dip # Conver
 
 P.dip<-df(F.dip,2,(gn.dip[1] + gn.dip[2]-2-1)) # P-value
 
-P.dip # = 0.26
+P.dip # = 0.22
 
 
 ############# triploid
@@ -614,14 +649,38 @@ F.trip<-(gn.trip[1]+gn.trip[2]-2-1)/((gn.trip[1] + gn.trip[2])*2)*H.T2.trip # Co
 
 P.trip<-df(F.trip,2,(gn.trip[1] + gn.trip[2]-2-1)) # P-value
 
-P.trip # = 0.354
+P.trip # = 0.14
 ```
 
 ## Experimental data
 
-### Growth
+### Physiology data
 ```{r}
-########
+######## #### #### #### #### ######## #### #### #### #### 
+# read in the master datalist
+tank.OG.df<-read.csv("data/Ploidzilla_tank data.csv")
+tank.OG.df$time.point<- as.factor(tank.OG.df$time.point)
+
+# keep only data from end of the project
+tank.T1.df<-tank.OG.df[(tank.OG.df$time.point=="T1"),] # just T1 data
+tank.T1.df$time.point<-droplevels(tank.T1.df$time.point)
+```
+
+calculate cytometry average cell densities
+```{r}
+######## #### #### #### ####  Cytometry: tank #### #### ####
+cyto<-read.csv("data/cytometry.R.csv")
+mean.fluor<-aggregate(Fluores.cell.ml~ plug.ID, data=cyto, FUN=mean)
+colnames(mean.fluor)<-c("plug.ID", "symb.cells.ml")
+#SD.fluor<-aggregate(Fluores.cell.ml~ plug.ID, data=cyto, FUN=sd)
+
+# merge cyto with master data
+tank.phys.cyto.df<-merge(tank.T1.df, mean.fluor, by = "plug.ID", all.x = TRUE)
+ 
+```
+
+calculate buoyant weight
+```{r}
 ######## Calculate Coral Dry Weights from Buoyant Weight (Davies 1989)
 ########
 
@@ -636,7 +695,7 @@ library(seacarb)
 ## rho(S = 35, T = 25, P = 0)
 
 # load dataset 
-bw <- read.csv("data/growth.R.csv")
+bw <- read.csv("data/Ploidzilla_growth tank.csv")
 
 bw <- bw %>% 
   dplyr::select(plug.ID:salinity) %>% 
@@ -647,9 +706,9 @@ bw <- bw %>%
 
 # add skeletal densities
 bw <- bw %>% 
-  select(-n) %>%
+  dplyr::select(-n) %>%
   mutate(skel_dens = 2.93) %>% # add skeletal densities
-  mutate(dry.mass.g = wet.mass.g / (1 - (sw_dens/skel_dens)))
+  mutate(dry.mass.g = coral.mass.water.g / (1 - (sw_dens/skel_dens)))
 
 ### split by time
 bw.T0<-bw %>% filter(time.point=="T0")
@@ -675,56 +734,93 @@ bw.corals<- bw.long[(bw.long$type=="coral"),]
 
 bw.corals$growth.corrected.mg.d<-((bw.corals$growth-0.02763588)/bw.corals$total.days)*1000
 
-# save output
-write.csv(bw.corals, "output/BW.final.csv")
+# 2 outliers to remove
+bw.corals<-bw.corals[!(bw.corals$plug.ID=="64" | 
+                         bw.corals$plug.ID=="902"),]
 
-###### read in surface area from photogram at T0
-SA<-read.csv("data/SA.R.csv")
-SA.reduc<- SA %>% select(plug.ID, surface.area.cm2) # select column needed
+# save output, this is the calcification data without cm2 normalization
+write.csv(bw.corals, "output/BW.proc_tank.csv")
 
-bw.corals.reduc<-bw.corals %>% select(plug.ID, treatment, ploidy, genotype, tank, growth.corrected.mg.d)
+# simplified for merging in with other data
+bw.corals.T1.calc<-bw.corals %>% select(plug.ID, growth.corrected.mg.d) # will merge this into master data below
 
-# merge by plug.ID
-bw.SA<- merge(bw.corals.reduc, SA.reduc, by = "plug.ID", all.x = TRUE)
-bw.SA$mg.CaCO3.cm2.d<- bw.SA$growth.corrected.mg.d / bw.SA$surface.area.cm2
-bw.SA<-na.omit(bw.SA) # remove any NAs
-bw.SA<-bw.SA[!(bw.SA$plug.ID=="64" | bw.SA$plug.ID=="902"),] # growth low
+# merge calcif with master data (phy, iso, cyto)
+tank.phys.cyto.BW.df<-merge(tank.phys.cyto.df, bw.corals.T1.calc, by = "plug.ID", all.x = TRUE)
+```
+
+normalize metrics merged in
+```{r}
+norm.df<-tank.phys.cyto.BW.df
+
+# cytometry to cells/cm2
+norm.df$symb.cm2<- (norm.df$symb.cells.ml*norm.df$blastate.ml)/norm.df$photgr.surface.area.cm2
+norm.df$symb.cm2<- round(norm.df$symb.cm2, 0) # round to single digit
+
+# calcification to cm2 norm
+norm.df$CaCO3.mg.cm2.d<- (norm.df$growth.corrected.mg.d)/norm.df$photgr.surface.area.cm2
+
+# total chlorophyll to cm2 norm
+norm.df$tot.chl.ug.cm2<- (norm.df$total.ug.chl.ml*norm.df$blastate.ml)/norm.df$photgr.surface.area.cm2
+
+# chlorophyll to cell norm
+norm.df$chl.pg.cell<- (norm.df$total.ug.chl.ml*10^6)/norm.df$symb.cells.ml
+```
+
+final, ordered, normalized data for models and plots
+```{r}
+####### phys and isotope data merged with calcification
+norm.df<-norm.df[!(norm.df$plug.ID=="7"),] # dead and never processed
 
 # format metadata
-make.fac<-c("treatment", "plug.ID", "ploidy", "tank", "genotype")
-bw.SA[make.fac]<-lapply(bw.SA[make.fac], factor) # make all these factors
+make.fac<-c("treatment", "tank", "ploidy", "genotype", "plug.ID")
+norm.df[make.fac]<-lapply(norm.df[make.fac], factor) # make all these factors
+
+# sort and reorder 
+norm.tank.df<-norm.df %>% 
+  select(coral.species, time.point, treatment, tank, ploidy, genotype, plug.ID, #metadata
+         blastate.ml, photgr.surface.area.cm2, photgr.vol.cm3, # airbrishing and photogrammetry
+         FvFm.mean, symb.cm2, tot.chl.ug.cm2, chl.pg.cell, CaCO3.mg.cm2.d, #photophys, physio, growth, 
+         ug.N.host, d15N.host, ug.C.host, d13C.host, C.N.mol.host, # host isotopes
+         ug.N.symb, d15N.symb, ug.C.symb, d13C.symb, C.N.mol.symb, # symbiont isotopes
+         d15N.h.s, d13C.h.s) # relative difference in isotopes
+
+#write output
+write.csv(norm.tank.df, "output/Ploidzilla_tank_norm.data.csv")
+
+```
+
+### Calcification model and plot
+```{r}
 
 # model
-anova(lmer(mg.CaCO3.cm2.d~ploidy*treatment+ (1|tank) + (1|genotype), data=bw.SA), type=2) # no effect
-ranova(lmer(mg.CaCO3.cm2.d~treatment*ploidy+ (1|tank) + (1|genotype), data=bw.SA)) #genotype and tank significant
-
-anova(lm(mg.CaCO3.cm2.d~treatment*ploidy, data=bw.SA))
+anova(lmer(CaCO3.mg.cm2.d~ploidy*treatment+ (1|tank) + (1|genotype), data=norm.tank.df), type=2) # no effect
+ranova(lmer(CaCO3.mg.cm2.d~treatment*ploidy+ (1|tank) + (1|genotype), data=norm.tank.df)) #genotype and tank significant
 
 # plot growth
 pd <- position_dodge(0.71) #offset for error bars and columns
 
 ##### growth boxplot 
-growth.plot<-ggplot(bw.SA, aes(treatment, mg.CaCO3.cm2.d, fill=ploidy)) +
+growth.plot<-ggplot(norm.tank.df, aes(treatment, CaCO3.mg.cm2.d, fill=ploidy)) +
   geom_point(aes(color=ploidy), alpha=0.7, position=position_jitterdodge())+
   geom_boxplot(outlier.shape = NA, alpha=0.7)+
   ylab(expression(paste("net growth (mg CaCO3 cm-2 d-1)")))+
   xlab("Treatment")+ theme_bw()+
-  ylim(0,1)+
+  ylim(0,1.5)+
   scale_fill_manual(values=c("goldenrod", "plum4")) +
   scale_color_manual(values=c("goldenrod", "plum4"))
 
 growth.plot
-dev.copy(pdf, "figures/growth.pdf", width = 5, height = 8)
+dev.copy(pdf, "figures/tank_growth.pdf", width = 5, height = 8)
 dev.off()
 ```
 
-```{r growth means}
+```{r growth means, include=FALSE, eval=FALSE}
 ########### if looking at means +/-SE
-grow.mean<-aggregate(mg.CaCO3.cm2.d~treatment + ploidy, data=bw.SA, FUN=mean)
-grow.n<-aggregate(mg.CaCO3.cm2.d~treatment + ploidy, data=bw.SA, FUN=length)
-grow.SD<-aggregate(mg.CaCO3.cm2.d~treatment + ploidy, data=bw.SA, FUN=sd)
+grow.mean<-aggregate(CaCO3.mg.cm2.d~treatment + ploidy, data=norm.tank.df, FUN=mean)
+grow.n<-aggregate(CaCO3.mg.cm2.d~treatment + ploidy, data=norm.tank.df, FUN=length)
+grow.SD<-aggregate(CaCO3.mg.cm2.d~treatment + ploidy, data=norm.tank.df, FUN=sd)
 
-grow.df<-cbind(grow.mean, (grow.SD$mg.CaCO3.cm2.d/sqrt(grow.n$mg.CaCO3.cm2.d)))
+grow.df<-cbind(grow.mean, (grow.SD$CaCO3.mg.cm2.d/sqrt(grow.n$CaCO3.mg.cm2.d)))
 colnames(grow.df)<-c("treatment", "ploidy", "mean", "SE")
 
 # plot it
@@ -736,18 +832,17 @@ growth.mean.plot<-ggplot(grow.df, aes(x=treatment, y=mean, color=ploidy, fill=pl
   xlab("Treatment")+ theme_bw()
 ```
 
-### PAM
+### PAM model and plot
 ```{r PAM}
-PAM<-read.csv("data/PAM.R.csv")
 
 # model
-anova(lmer(FvFm.mean~treatment*ploidy+ (1|tank) + (1|genotype), data=PAM), type=2) # no effect
-ranova(lmer(FvFm.mean~treatment*ploidy+ (1|tank) + (1|genotype), data=PAM)) # tank signif, genotype almost
+anova(lmer(FvFm.mean~treatment*ploidy+ (1|tank) + (1|genotype), data=norm.tank.df), type=2) # no effect
+ranova(lmer(FvFm.mean~treatment*ploidy+ (1|tank) + (1|genotype), data=norm.tank.df)) # tank signif, genotype almost
 
-anova(lm(FvFm.mean~treatment*ploidy, data=PAM)) # no effect
+anova(lm(FvFm.mean~treatment*ploidy, data=norm.tank.df)) # no effect
 
 ##### growth boxplot 
-PAM.plot<-ggplot(PAM, aes(treatment, FvFm.mean, fill=ploidy)) +
+PAM.plot<-ggplot(norm.tank.df, aes(treatment, FvFm.mean, fill=ploidy)) +
  geom_point(aes(color=ploidy), alpha=0.7, position=position_jitterdodge())+
   geom_boxplot(outlier.shape = NA, alpha=0.7)+
   ylab(expression(paste("Fv/Fm")))+
@@ -761,41 +856,14 @@ dev.copy(pdf, "figures/PAM.pdf", width = 5, height = 8)
 dev.off()
 ```
 
-### Cytometry: tank
+### Cytometry model and plot
 ```{r}
-cyto<-read.csv("data/cytometry.R.csv")
-mean.fluor<-aggregate(Fluores.cell.ml~ plug.ID, data=cyto, FUN=mean)
-colnames(mean.fluor)<-c("plug.ID", "symb.cells.ml")
-
-SD.fluor<-aggregate(Fluores.cell.ml~ plug.ID, data=cyto, FUN=sd)
-
-#### read in blastate
-blast<-read.csv("data/blast.R.csv")
-blast<- blast %>% dplyr::select(plug.ID, blastate.ml) # reduce columns
-
-# merge with other data
-cyto.blast<- merge(blast, mean.fluor, by = "plug.ID", all.x = TRUE)
-cyto.blast<-na.omit(cyto.blast)
-
-SA<-read.csv("data/SA.R.csv")
-SA.T1<- SA[(SA$time.point=="T1"),] # only T1 data
-
-# merge in blastate
-cyto.SA<- merge(cyto.blast, SA.T1, by = "plug.ID", all.x = TRUE)
-
-# make cells/cm2
-cyto.SA$symb.dens<- (cyto.SA$symb.cells.ml*cyto.SA$blastate.ml)/cyto.SA$surface.area.cm2
-cyto.SA$symb.dens<-round(cyto.SA$symb.dens, 0)
-cyto.SA<- cyto.SA[!(cyto.SA$plug.ID=="60"),] # SA is 0, to be fixed
-
-n<-aggregate(symb.dens~ploidy+treatment, data=cyto.SA, FUN=length)
-
 ### model
-anova(lmer(symb.dens~treatment*ploidy+ (1|tank) + (1|genotype), data=cyto.SA), type=2) # treatment
-ranova(lmer(symb.dens~treatment*ploidy+ (1|tank) + (1|genotype), data=cyto.SA)) # genotype signif
+anova(lmer(symb.dens~treatment*ploidy+ (1|tank) + (1|genotype), data=norm.tank.df), type=2) # treatment
+ranova(lmer(symb.dens~treatment*ploidy+ (1|tank) + (1|genotype), data=norm.tank.df)) # genotype signif
 
 ##### symbcells boxplot 
-symb.plot.tank<-ggplot(cyto.SA, aes(treatment, symb.dens, fill=ploidy)) +
+symb.plot.tank<-ggplot(norm.tank.df, aes(treatment, symb.dens, fill=ploidy)) +
   geom_point(aes(color=ploidy), alpha=0.7, position=position_jitterdodge())+
   geom_boxplot(outlier.shape = NA, alpha=0.7)+
   ylab(expression(paste("tank symbiont cells (cm"^{-2},")")))+
@@ -805,7 +873,7 @@ symb.plot.tank<-ggplot(cyto.SA, aes(treatment, symb.dens, fill=ploidy)) +
   scale_color_manual(values=c("goldenrod", "plum4")) + ggtitle("Tank corals")
 
 # model
-Anova(lm(symb.cells.ml~treatment*ploidy, data=cyto.SA), type=2)
+Anova(lm(symb.cells.ml~treatment*ploidy, data=norm.tank.df), type=2)
 
 symb.plot.tank
 dev.copy(pdf, "figures/symb.cells.tank.pdf", width = 5, height = 8)
