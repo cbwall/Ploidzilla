@@ -673,9 +673,197 @@ P.trip # = 0.14
 
 ## Experimental data
 
-### Temp and PAR 
+### Temp data
 ```{r}
+#load data
+temp = read.csv("output/Rainbow_Temp_merged.csv")
 
+#format data
+temp$date = as.Date(temp$date, format = "%m/%d/%y")
+
+temp = pivot_longer(
+  temp,
+  cols = tank_1:tank_12,
+  names_to = "tank",
+  values_to = "temp"
+)
+
+make.fac = c("tank")
+temp[make.fac]=lapply(temp[make.fac], factor)
+
+# #only want tanks from experiment 7-12
+# temp = temp %>% filter(tank == c("tank_7", "tank_8", "tank_9", "tank_10", "tank_11", "tank_12")) 
+#temp$tank = droplevels(temp$tank)
+
+#create new column for treatment based on tank number
+temp$treatment = ifelse(temp$tank == "tank_1" |temp$tank == "tank_3" | temp$tank == "tank_5" | temp$tank == "tank_7" |temp$tank == "tank_9" | temp$tank == "tank_11", "heated", "ambient")
+temp$treatment = as.factor(temp$treatment)
+
+#calculate mean daily temperature
+mean_daily_temp = temp %>%
+  group_by(date, tank, treatment) %>% 
+  dplyr::summarise(temp = mean(temp, na.rm = TRUE))
+
+#set treatment colors
+trt_cols <- c("steelblue3", "coral3")
+
+#plot temp of tanks 7-12
+temp_p = mean_daily_temp %>% 
+  filter(tank %in% paste0("tank_", 7:12)) %>% 
+  ggplot(aes(color=treatment, fill=treatment, x=date, y = temp)) +
+  geom_smooth(span = 0.1, se = TRUE, show.legend = FALSE) +
+  geom_point() +
+  labs(x = "Date", y = expression("Temperature ("*degree*C*")"), dictionary = c(treatment = "Treatment")) +
+  theme_bw() +
+  scale_color_manual(values = trt_cols) +
+  scale_fill_manual(values = trt_cols) +
+  scale_x_date(
+    date_breaks = "1 week",   
+    date_labels = "%b %d"      
+  )
+temp_p
+
+#plot temp of tanks 1-6
+temp_p2 = mean_daily_temp %>% 
+  filter(tank %in% paste0("tank_", 1:6)) %>% 
+  ggplot(aes(color=treatment, fill=treatment, x=date, y = temp)) +
+  geom_smooth(span = 0.1, se = TRUE, show.legend = FALSE) +
+  geom_point() +
+  labs(x = "Date", y = expression("Temperature ("*degree*C*")"), 
+       dictionary = c(treatment = "Treatment")) +
+  theme_bw() +
+  scale_color_manual(values = trt_cols) +
+  scale_fill_manual(values = trt_cols) +
+  scale_x_date(
+    date_breaks = "1 week",   
+    date_labels = "%b %d"      
+  )
+temp_p2
+
+#plot temp of all tanks
+temp_all_p = mean_daily_temp %>% 
+  ggplot(aes(color=treatment, fill=treatment, x=date, y = temp)) +
+  geom_smooth(span = 0.1, se = TRUE, show.legend = FALSE) +
+  geom_point() +
+  labs(x = "Date", y = expression("Temperature ("*degree*C*")"),
+       dictionary = c(treatment = "Treatment")) +
+  theme_bw() +
+  scale_color_manual(values = trt_cols) +
+  scale_fill_manual(values = trt_cols) +
+  scale_x_date(
+    date_breaks = "1 week",   
+    date_labels = "%b %d"      
+  )
+temp_all_p
+
+ggsave(file = "figures/temp_plot1.pdf", plot = temp_p)
+ggsave(file = "figures/temp_plot2.pdf", plot = temp_p2)
+ggsave(file = "figures/temp_plot3.pdf", plot = temp_all_p)
+```
+
+### PAR data
+Plots need to be beautified - colors and legend
+```{r}
+#load data
+par = read.csv("output/Rainbow_PAR_merged.csv")
+
+#format data
+par$date = as.Date(par$date, format = "%m/%d/%y")
+
+par = pivot_longer(
+  par,
+  cols = tank_1:tank_12,
+  names_to = "tank",
+  values_to = "par"
+)
+
+#underwater correction factor per Apogee
+par = par %>% mutate(par=par*1.25)
+
+make.fac = c("tank")
+par[make.fac]=lapply(par[make.fac], factor)
+
+
+#create new column for treatment based on tank number
+par$treatment = ifelse(par$tank == "tank_1" |par$tank == "tank_3" | par$tank == "tank_5" | par$tank == "tank_7" |par$tank == "tank_9" | par$tank == "tank_11", "heated", "ambient")
+par$treatment = as.factor(par$treatment)
+
+
+
+#calculate mean par 
+mean_hourly_par = par %>%
+  mutate(hour = as.numeric(sub(":.*", "", as.character(time))))  %>%
+  group_by(hour, date, tank) %>%
+  dplyr::summarise(par = mean(par, na.rm = TRUE))
+
+#add column for date and time combined for plotting
+mean_hourly_par = mean_hourly_par %>%
+  mutate(datetime = ymd_h(paste(date, hour), tz = "UTC"))
+
+#figure out which days the tank lights are active
+day_check = mean_hourly_par %>%
+  ungroup() %>%
+  mutate(set = ifelse(tank %in% paste0("tank_", 7:12), "low", "up")) %>%
+  group_by(date, set) %>%
+  dplyr::summarise(max_par = max(par, na.rm = TRUE), .groups = "drop") %>%
+  tidyr::pivot_wider(names_from = set, values_from = max_par) %>%
+  mutate(status = case_when(low > 200 & up > 200 ~ "both",
+                            low > 200 ~ "low",
+                            up > 200 ~ "up",
+                            TRUE ~ "neither"))
+print(day_check)
+
+#define lower tank (7-12) and upper (1-6) tank days
+#switchover (both) days will be dropped (lights were on in both sets of tanks on June 3 but it wasn't a switchover day)
+low_days = c(day_check$date[day_check$status == "low"], as.Date("2025-06-03"))
+up_days  = day_check$date[day_check$status == "up"]
+
+#removing data that isn't considered an active day from each set of tanks
+low_tank_par = mean_hourly_par %>%
+  ungroup() %>%
+  filter(tank %in% paste0("tank_", 7:12), date %in% low_days)
+
+up_tank_par = mean_hourly_par %>%
+  ungroup() %>%
+  filter(tank %in% paste0("tank_", 1:6), date %in% up_days)
+
+#data from both sets of tanks with only the relevant days included for each
+active_mean_par = bind_rows(low_tank_par, up_tank_par)
+
+
+
+#get average of par across all days for an hourly profile
+par_profile = active_mean_par %>%
+  group_by(tank, hour) %>%
+  dplyr::summarise(par = mean(par, na.rm = TRUE))
+
+par_profile$treatment = ifelse(par_profile$tank == "tank_1" |par_profile$tank == "tank_3" | par_profile$tank == "tank_5" | par_profile$tank == "tank_7" |par_profile$tank == "tank_9" | par_profile$tank == "tank_11", "heated", "ambient")
+par_profile$treatment = as.factor(par_profile$treatment)
+
+#plot mean daily par profile by tank
+par_profile_p = ggplot(par_profile, aes(x = hour, y = par, color = tank)) +
+  geom_smooth(span = 0.3, show.legend = FALSE) +
+  geom_point() +
+  scale_x_continuous(breaks = seq(0, 24, 4)) +
+  labs(x = "Hour of day",
+       y = expression("PAR ("*mu*"mol photons m"^-2*" s"^-1*")"),
+       color = "Tank") +
+  theme_bw() 
+par_profile_p
+
+#plot mean daily par profile line fit with all 
+par_profile_p2 = ggplot(par_profile, aes(x = hour, y = par)) +
+  geom_smooth(span = 0.3, color = "black", show.legend = FALSE) +
+  geom_point(aes(color = tank)) +
+  scale_x_continuous(breaks = seq(0, 24, 4)) +
+  labs(x = "Hour of day",
+       y = expression("PAR ("*mu*"mol photons m"^-2*" s"^-1*")"),
+       color = "Tank") +
+  theme_bw() 
+par_profile_p2
+
+ggsave(file = "figures/par_plot_tank.pdf", plot = par_profile_p)
+ggsave(file = "figures/par_plot_all.pdf", plot = par_profile_p2)
 ```
 
 ### Physiology data
