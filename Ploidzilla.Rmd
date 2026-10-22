@@ -54,7 +54,7 @@ Fig.formatting <-
 Import and normalize physiology metrics
 ```{r}
 # symbiont counts from microscopy and wax dipping
-insitu.df<-read.csv("data/Ploidzilla_insitu data.csv")
+insitu.df<-read.csv("data/Ploidzilla_insitu_rawdata.csv")
 samplesize<-aggregate(plug.ID~ploidy, data=insitu.df, FUN=length) # 29 diploid, 23 triploid)
 
 #### format metadata
@@ -109,7 +109,7 @@ dev.off()
 ### Bulk isotope data
 pull in data and make plots
 ```{r}
-iso.insit.df<-read.csv("data/Ploidzilla_insitu iso long.csv")
+iso.insit.df<-read.csv("data/Ploidzilla_insitu_isolong.csv")
 
 C.samplesize<-aggregate(d13C~ploidy:fraction, data=iso.insit.df, FUN=length)
 N.samplesize<-aggregate(d15N~ploidy:fraction, data=iso.insit.df, FUN=length)
@@ -121,8 +121,7 @@ iso.insit.df[make.fac]<-lapply(iso.insit.df[make.fac], factor) # make all these 
 ### inspect whether any contam? (nope)
 # d13C-carbonate contamination would drive more + d13C values with increasing C:N (more carbon relative to N)
 d13C.CN.plot<-ggplot(iso.insit.df, aes(y=C.N.mol, x=d13C, color=fraction)) +
-  geom_jitter(width=0.2, aes(color=ploidy:fraction), alpha=0.5)+
-  geom_point(size=2.5)+
+  geom_point(size=2.5, aes(color=fraction), alpha=0.5)+
   scale_color_manual(values=c("coral", "gray50")) +
   scale_fill_manual(values=c("coral", "gray50")) +
   geom_smooth(method=lm, aes(fill=fraction)) +
@@ -164,10 +163,12 @@ d15N.plot<-ggplot(iso.insit.df, aes(ploidy:fraction, d15N, fill=(ploidy:fraction
   theme_bw()+
   guides(fill="none", color="none")
 
-d15N.h.s.plot<-ggplot(iso.insit.df, aes(ploidy, d15N.h.s, fill=ploidy)) +
+d15N.h.s.plot<-ggplot(tank.isolong, aes(ploidy, d15N.h.s, fill=ploidy)) +
   geom_hline(yintercept=0, linetype="dashed", color = "gray50") +
+  geom_jitter(width=0.2, aes(color=ploidy), alpha=0.5)+
   geom_boxplot(outlier.size = 0.7, alpha=0.6)+
   scale_fill_manual(values=c("goldenrod", "plum4")) +
+  scale_color_manual(values=c("goldenrod", "plum4")) +
   ylab(expression(paste(delta^{15},  N[H-S], " (\u2030)")))+
   ylim(-2, 2) +
   xlab("Ploidy State")+ 
@@ -202,7 +203,7 @@ dev.off()
 ### SIBER
 intro to SIBER: https://cran.r-project.org/web/packages/SIBER/vignettes/Introduction-to-SIBER.html
 ```{r}
-insit.iso.long<- read.csv("data/Ploidzilla_insitu iso long.csv")
+insit.iso.long<- read.csv("data/Ploidzilla_insitu_isolong.csv")
 
 SI.data <- insit.iso.long %>% 
   dplyr::select(ploidy, plug.ID, fraction, d15N, d13C) %>%
@@ -869,7 +870,7 @@ ggsave(file = "figures/par_plot_all.pdf", plot = par_profile_p2)
 ```{r}
 ######## #### #### #### #### ######## #### #### #### #### 
 # read in the master datalist
-tank.OG.df<-read.csv("data/Ploidzilla_tank data.csv")
+tank.OG.df<-read.csv("data/Ploidzilla_tank_rawdata.csv")
 tank.OG.df$time.point<- as.factor(tank.OG.df$time.point)
 
 # keep only data from end of the project
@@ -880,7 +881,7 @@ tank.T1.df$time.point<-droplevels(tank.T1.df$time.point)
 calculate cytometry average cell densities
 ```{r}
 ######## #### #### #### ####  Cytometry: tank #### #### ####
-cyto<-read.csv("data/cytometry.R.csv")
+cyto<-read.csv("data/tank_cytometry.R.csv")
 mean.fluor<-aggregate(Fluores.cell.ml~ plug.ID, data=cyto, FUN=mean)
 colnames(mean.fluor)<-c("plug.ID", "symb.cells.ml")
 #SD.fluor<-aggregate(Fluores.cell.ml~ plug.ID, data=cyto, FUN=sd)
@@ -908,7 +909,7 @@ library(dplyr)
 ## rho(S = 35, T = 25, P = 0)
 
 # load dataset 
-bw <- read.csv("data/Ploidzilla_growth tank.csv")
+bw <- read.csv("data/Ploidzilla_tank_growth.csv")
 
 bw <- bw %>% 
   mutate(bw, sw_dens = rho(S = salinity, T = temp, P = 0), # calculate density of seawater
@@ -1130,7 +1131,7 @@ Anova(lm(chl.pg.cell~treatment*ploidy, data=norm.tank.df), type=2)
 ```
 
 ```{r}
-# combine field and tank plot
+# combine tank plots
 
 # extract legend
 tank.legend <- get_legend(
@@ -1146,20 +1147,22 @@ dev.off()
 
 ```
 
-### Tank isotope plots
+### Isotopes, tank
+plot tank isotope data
 ```{r}
-C.samplesize<-aggregate(d13C~ploidy:fraction, data=norm.tank.df, FUN=length)
-N.samplesize<-aggregate(d15N~ploidy:fraction, data=norm.tank.df, FUN=length)
+# import long format for isotopes
+tank.isolong<-read.csv("data/Ploidzilla_tank_isolong.csv")
 
-# format metadata
-make.fac<-c("ploidy", "fraction", "plug.ID", "genotype")
-iso.insit.df[make.fac]<-lapply(iso.insit.df[make.fac], factor) # make all these factors
+#### format metadata
+make.fac<-c("ploidy", "plug.ID", "genotype", "fraction", "treatment", "tank")
+tank.isolong[make.fac]<-lapply(tank.isolong[make.fac], factor) # make all these factors
+
+tank.isolong<-tank.isolong %>% filter(!plug.ID == "7")
 
 ### inspect whether any contam? (nope)
 # d13C-carbonate contamination would drive more + d13C values with increasing C:N (more carbon relative to N)
-d13C.CN.plot<-ggplot(iso.insit.df, aes(y=C.N.mol, x=d13C, color=fraction)) +
-  geom_jitter(width=0.2, aes(color=ploidy:fraction), alpha=0.5)+
-  geom_point(size=2.5)+
+d13C.CN.plot.tank<-ggplot(tank.isolong, aes(y=C.N.mol, x=d13C, color=fraction, shape=treatment)) +
+  geom_point(size=2.5, aes(color=fraction), alpha=0.7)+
   scale_color_manual(values=c("coral", "gray50")) +
   scale_fill_manual(values=c("coral", "gray50")) +
   geom_smooth(method=lm, aes(fill=fraction)) +
@@ -1168,60 +1171,69 @@ d13C.CN.plot<-ggplot(iso.insit.df, aes(y=C.N.mol, x=d13C, color=fraction)) +
   theme_bw()
 
 ##### Carbon
-d13C.plot<-ggplot(iso.insit.df, aes(ploidy:fraction, d13C, fill=(ploidy:fraction))) +
+d13C.plot.tank<-ggplot(tank.isolong, aes(ploidy:fraction, d13C, fill=(ploidy:fraction))) +
   geom_jitter(width=0.2, aes(color=ploidy:fraction), alpha=0.5)+
-  geom_boxplot(outlier.shape = NA, alpha=c(0.8, 0.3, 0.8, 0.3))+
+  geom_boxplot(outlier.shape = NA, alpha=c(0.8, 0.3, 0.8, 0.3, 0.8, 0.3, 0.8, 0.3))+
   scale_fill_manual(values=c("goldenrod", "goldenrod", "plum4", "plum4")) +
   scale_color_manual(values=c("goldenrod", "goldenrod", "plum4", "plum4"))+
   ylab(expression(paste(delta^{13}, C, " (\u2030)")))+
   ylim(-20, -14) +
   xlab("Ploidy State")+
   theme_bw()+
-  guides(fill="none", color="none")
+  guides(fill="none", color="none")+
+  facet_wrap(~treatment)
 
-d13C.h.s.plot<-ggplot(iso.insit.df, aes(ploidy, d13C.h.s, fill=ploidy)) +
+d13C.h.s.plot.tank<-ggplot(tank.isolong, aes(ploidy, d13C.h.s, fill=ploidy)) +
   geom_hline(yintercept=0, linetype="dashed", color = "gray50") +
   geom_boxplot(outlier.size = 0.7, alpha=0.6)+
+  geom_jitter(width=0.2, aes(color=ploidy), alpha=0.5)+
   scale_fill_manual(values=c("goldenrod", "plum4")) +
+  scale_color_manual(values=c("goldenrod", "plum4")) +
   ylab(expression(paste(delta^{13},  C[H-S], " (\u2030)")))+
   ylim(-2, 2) +
   xlab("Ploidy State")+ 
   theme_bw()+
-  guides(fill="none", color="none")
+  guides(fill="none", color="none") +
+   facet_wrap(~treatment)
 
 ##### Nitrogen
-d15N.plot<-ggplot(iso.insit.df, aes(ploidy:fraction, d15N, fill=(ploidy:fraction))) +
+d15N.plot.tank<-ggplot(tank.isolong, aes(ploidy:fraction, d15N, fill=(ploidy:fraction))) +
   geom_jitter(width=0.2, aes(color=ploidy:fraction), alpha=0.5)+
-  geom_boxplot(outlier.shape = NA, alpha=c(0.8, 0.3, 0.8, 0.3))+
+  geom_boxplot(outlier.shape = NA, alpha=c(0.8, 0.3, 0.8, 0.3, 0.8, 0.3, 0.8, 0.3))+
   scale_fill_manual(values=c("goldenrod", "goldenrod", "plum4", "plum4")) +
   scale_color_manual(values=c("goldenrod", "goldenrod", "plum4", "plum4"))+
   ylab(expression(paste(delta^{15}, N, " (\u2030)")))+
-  ylim(3, 6) +
+  ylim(3, 7) +
   xlab("Ploidy State")+ 
   theme_bw()+
-  guides(fill="none", color="none")
+  guides(fill="none", color="none") +
+  facet_wrap(~treatment)
 
-d15N.h.s.plot<-ggplot(iso.insit.df, aes(ploidy, d15N.h.s, fill=ploidy)) +
+d15N.h.s.plot.tank<-ggplot(tank.isolong, aes(ploidy, d15N.h.s, fill=ploidy)) +
   geom_hline(yintercept=0, linetype="dashed", color = "gray50") +
+  geom_jitter(width=0.2, aes(color=ploidy), alpha=0.5)+
   geom_boxplot(outlier.size = 0.7, alpha=0.6)+
   scale_fill_manual(values=c("goldenrod", "plum4")) +
+  scale_color_manual(values=c("goldenrod", "plum4")) +
   ylab(expression(paste(delta^{15},  N[H-S], " (\u2030)")))+
   ylim(-2, 2) +
   xlab("Ploidy State")+ 
   theme_bw()+
-  guides(fill="none", color="none")
+  guides(fill="none", color="none") +
+  facet_wrap(~treatment)
 
 ######C.N
-C.N.plot<-ggplot(iso.insit.df, aes(ploidy:fraction, C.N.mol, fill=ploidy:fraction)) +
+C.N.plot.tank<-ggplot(tank.isolong, aes(ploidy:fraction, C.N.mol, fill=ploidy:fraction)) +
   geom_jitter(width=0.2, aes(ploidy:fraction, color=ploidy:fraction), alpha=0.5)+
-  geom_boxplot(outlier.shape = NA, alpha=c(0.8, 0.3, 0.8, 0.3))+
+  geom_boxplot(outlier.shape = NA, alpha=c(0.8, 0.3, 0.8, 0.3, 0.8, 0.3, 0.8, 0.3))+
   scale_fill_manual(values=c("goldenrod", "goldenrod", "plum4", "plum4")) +
   scale_color_manual(values=c("goldenrod", "goldenrod", "plum4", "plum4"))+
   ylab("C:N (molar)")+
-  ylim(2, 12) +
+  ylim(4, 10) +
   xlab("Ploidy state")+ 
   theme_bw() +
-  guides(fill="none")
+  guides(fill="none") +
+  facet_wrap(~treatment)
 
 # extract legend
 iso.legend <- get_legend(
@@ -1229,16 +1241,16 @@ iso.legend <- get_legend(
   C.N.plot + theme(legend.box.margin = margin(0, 0, 0, 10)))
 
 ###### compile plots
-insitu.plots<-plot_grid(d13C.plot, d15N.plot, C.N.plot+guides(color="none"),
-                        d13C.h.s.plot, d15N.h.s.plot, iso.legend, nrow=2, ncol=3, rel_widths=c(1,1,1,1,1,0.5))
-insitu.plots
-dev.copy(pdf, "figures/insitu_isoplots.pdf", width = 9, height = 8)
+tank.iso.plots<-plot_grid(d13C.plot.tank, d15N.plot.tank, C.N.plot.tank + guides(color="none"),
+                        d13C.h.s.plot.tank, d15N.h.s.plot.tank, iso.legend, nrow=2, ncol=3, rel_widths=c(1,1,1,1,1,0.5))
+tank.iso.plots
+dev.copy(pdf, "figures/tank_isoplots.pdf", width = 11, height = 8)
 dev.off()
 ```
 
 ### Feeding trials
 ```{r}
-feed<-read.csv("data/feeding.csv")
+feed<-read.csv("data/tank_feeding.csv")
 feed.simple<- feed %>% select(treatment, tank, genotype, ploidy, plug.ID, 
                           prey.capture.h, surface.area.cm2, prey.cap.h.cm2)
 
@@ -1288,7 +1300,7 @@ feed.plot<-ggplot(feed.df, aes(treatment, prey.cap.h.cm2, fill=ploidy)) +
   facet_wrap(~size)
 
 feed.plot
-dev.copy(pdf, "figures/feeding.pdf", width = 5, height = 8)
+dev.copy(pdf, "figures/feeding rate_tank.pdf", width = 6, height = 7)
 dev.off()
 
 ```
