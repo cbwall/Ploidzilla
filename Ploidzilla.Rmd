@@ -50,6 +50,72 @@ Fig.formatting <-
 ```
 ## Overview
 
+### Site Map
+```{r, site maps, fig.cap="**Figure 1**. Site map of Kaneohe Bay.", fig.align='center', results='hide'}
+
+# load data
+map.env <- read.csv("data/site.coordinates.csv")
+API <- read.csv("data/API_key.csv") # 1,1 df with column "API.key" and user API.
+API.key <- API[1,1]
+
+######## using ggmap
+ggmap::register_google(key=API.key)
+
+##################
+# Hawaii Map #
+##################
+
+HI.map <- ggmap::get_googlemap(center = c(-157.96, y = 21.44), zoom = 10, source = "google", maptype = "satellite",
+                      style = c(feature = "poi", element = "labels", visibility = "off")) 
+
+# "poi" is to remove places of interest from map, other options avaialble too...
+# no cities, roads, just "CA"...
+# style = 'feature:road|element:all|visibility:simplified&style=feature:administrative.locality|element:labels|visibility:off')
+# https://developers.google.com/maps/documentation/maps-static/styling#features
+
+HI.map_for_man <- ggmap::ggmap(HI.map) + 
+  geom_point(aes(x = -157.810, y = 21.463), pch = 23, color = "black", 
+                     fill = "mediumseagreen", size = 4, stroke=0.5) +
+  xlab("longitude") + ylab("latitude") +
+  theme(text = element_text(size = 3),
+       plot.margin = unit(c(0.2, 0.5, 0.2, 0.2), "cm")) 
+
+
+############
+# site map #
+############
+HI.rev = c(x = -157.805, y = 21.45)
+
+map.HI <- get_map(HI.rev, 
+                      zoom = 13, 
+                      scale = 2, 
+                      maptype = "satellite",
+                      source = "google", extent = "device", legend = "topright")
+
+## sites lat long
+lat.long <- map.env %>% 
+  dplyr::select(site, lat, long) %>%
+  filter(site != "KBay")
+
+HI.sites <-
+  ggmap(map.HI) +
+  geom_point(aes(x = long, y = lat), data = lat.long, alpha = 0.8, color = "coral", size = 4)+
+  geom_point(aes(x = long, y = lat), data = lat.long, alpha = 1, color = "black", size = 4.5, pch = 21)+
+  labs(x = "longitude", y = "latitude") +
+  theme(text = element_text(size = 6),
+       plot.margin = unit(c(0.2, 0.5, 0.2, 0.2), "cm"))
+
+###
+site.plots <- plot_grid(HI.map_for_man, HI.sites, 
+          labels = c('A', 'B'), label_size = 8, hjust = -1, vjust = 6, ncol = 2, nrow = 1)
+
+
+### export it
+pdf(file = "figures/Fig.sites.pdf", height = 4, width = 8)
+site.plots
+dev.off()
+```
+
 ## In situ data
 Import and normalize physiology metrics
 ```{r}
