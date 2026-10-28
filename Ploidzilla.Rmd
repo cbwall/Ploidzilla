@@ -783,13 +783,24 @@ par = par %>% mutate(par=par*1.25)
 make.fac = c("tank")
 par[make.fac]=lapply(par[make.fac], factor)
 
+# cut this day as lights weren't quite right yet
+par<- par[(par$date > "2025-05-15"),]
+
 
 #create new column for treatment based on tank number
 par$treatment = ifelse(par$tank == "tank_1" |par$tank == "tank_3" | par$tank == "tank_5" | par$tank == "tank_7" |par$tank == "tank_9" | par$tank == "tank_11", "heated", "ambient")
 par$treatment = as.factor(par$treatment)
 
+## look at the peak irradiance window
+par.high<-par
+par.high$high<-ifelse(par$time > "11:59" & par$time < "13:01" & par$par > "50", "peak", "not")
+par.high<- par.high[(par.high$high=="peak"),]
+par.high$par<-as.numeric(par.high$par)
+mean(par.high$par, na.rm=TRUE) #554
+sd(par.high$par,  na.rm=TRUE) #54
 
 
+##
 #calculate mean par 
 mean_hourly_par = par %>%
   mutate(hour = as.numeric(sub(":.*", "", as.character(time))))  %>%
@@ -838,7 +849,10 @@ par_profile = active_mean_par %>%
   dplyr::summarise(par = mean(par, na.rm = TRUE))
 
 par_profile$treatment = ifelse(par_profile$tank == "tank_1" |par_profile$tank == "tank_3" | par_profile$tank == "tank_5" | par_profile$tank == "tank_7" |par_profile$tank == "tank_9" | par_profile$tank == "tank_11", "heated", "ambient")
-par_profile$treatment = as.factor(par_profile$treatment)
+par_profile$treatment = factor(par_profile$treatment, levels= c("ambient", "heated"))
+
+#set treatment colors
+trt_cols <- c("steelblue3", "coral3")
 
 #plot mean daily par profile by tank
 par_profile_p = ggplot(par_profile, aes(x = hour, y = par, color = tank)) +
@@ -853,17 +867,24 @@ par_profile_p
 
 #plot mean daily par profile line fit with all 
 par_profile_p2 = ggplot(par_profile, aes(x = hour, y = par)) +
-  geom_smooth(span = 0.3, color = "black", show.legend = FALSE) +
-  geom_point(aes(color = tank)) +
+  geom_smooth(span = 0.3, color = "gray40", linewidth=1, show.legend = FALSE) +
+  geom_point(aes(color = treatment), alpha=0.8) +
+  scale_color_manual(values = trt_cols)+
   scale_x_continuous(breaks = seq(0, 24, 4)) +
   labs(x = "Hour of day",
        y = expression("PAR ("*mu*"mol photons m"^-2*" s"^-1*")"),
-       color = "Tank") +
+       color = "Treatment") +
   theme_bw() 
 par_profile_p2
 
 ggsave(file = "figures/par_plot_tank.pdf", plot = par_profile_p)
-ggsave(file = "figures/par_plot_all.pdf", plot = par_profile_p2)
+ggsave(file = "figures/par_plot_all.pdf", plot = par_profile_p2, height=5, width= 4)
+
+### peak irradiance means
+par_profile.noon<-par_profile %>% filter(hour %in% "12")
+mean(par_profile.noon$par)
+sd(par_profile.noon$par)
+aggregate(hour~par, data=par_profile.noon, FUN=mean)
 ```
 
 ### Physiology data
